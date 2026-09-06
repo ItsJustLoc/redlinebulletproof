@@ -1,0 +1,9 @@
+node_modules
+.next
+out
+package-lock.json
+public
+README.md
+docs
+AGENTS.md
+CLAUDE.md
