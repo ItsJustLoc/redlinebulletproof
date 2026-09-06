@@ -53,6 +53,11 @@ const safari = await webkit.launch();
 const mobile = await safari.newPage({ ...devices["iPhone 13"] });
 await mobile.goto("http://localhost:3100", { waitUntil: "networkidle" });
 await mobile.screenshot({ path: "test-results/visual/mobile-title.png" });
+await mobile.locator("#chapter-redline").scrollIntoViewIfNeeded();
+await mobile.locator("#chapter-redline img").evaluate((image) => image.decode());
+await mobile.evaluate(
+  () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+);
 await mobile
   .locator("#chapter-redline")
   .screenshot({ path: "test-results/visual/mobile-redline.png" });
