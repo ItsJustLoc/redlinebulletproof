@@ -10,7 +10,7 @@ export const PHASES = [
   { id: "EXPLODED_VIEW", start: 0.8, end: 0.93, stage: 4 },
   { id: "PRODUCT_REVEAL", start: 0.93, end: 1, stage: 4 },
 ] as const;
-export const STORY_SCROLL = { distance: 7800, scrub: 0.65 } as const;
+export const STORY_SCROLL = { distance: 7800, scrub: 0.18 } as const;
 export const EVENTS = {
   fire: 0.085,
   glassImpact: 0.262,

@@ -12,6 +12,7 @@ const Viewer = dynamic(() => import("./product-viewer"), { ssr: false });
 export function ProductSection() {
   const [part, setPart] = useState(0),
     [inspect, setInspect] = useState(false),
+    [immediate, setImmediate] = useState(false),
     [rotation, setRotation] = useState(0),
     [exploded, setExploded] = useState(false),
     [failed, setFailed] = useState(false);
@@ -73,6 +74,7 @@ export function ProductSection() {
                   part={productParts[part].id}
                   rotation={rotation}
                   exploded={exploded}
+                  immediate={immediate}
                   onFailure={failure}
                 />
               </SceneErrorBoundary>
@@ -96,6 +98,11 @@ export function ProductSection() {
               ))}
             </div>
           )}
+          {inspect && allow3d && (
+            <span className="viewer-selection" aria-live="polite">
+              {productParts[part].title} selected
+            </span>
+          )}
           <div className="viewer-controls">
             {allow3d && !inspect && (
               <button className="button button-secondary" onClick={() => setInspect(true)}>
@@ -107,20 +114,29 @@ export function ProductSection() {
                 <button
                   className="icon-button"
                   aria-label="Rotate seat left"
-                  onClick={() => setRotation(rotation - 0.3)}
+                  onClick={(event) => {
+                    setImmediate(event.detail === 0);
+                    setRotation((value) => value - 0.3);
+                  }}
                 >
                   <RotateCcw size={18} />
                 </button>
                 <button
                   className="icon-button"
                   aria-label="Rotate seat right"
-                  onClick={() => setRotation(rotation + 0.3)}
+                  onClick={(event) => {
+                    setImmediate(event.detail === 0);
+                    setRotation((value) => value + 0.3);
+                  }}
                 >
                   <RotateCw size={18} />
                 </button>
                 <button
                   className="button button-secondary"
-                  onClick={() => setExploded(!exploded)}
+                  onClick={(event) => {
+                    setImmediate(event.detail === 0);
+                    setExploded((value) => !value);
+                  }}
                   aria-pressed={exploded}
                 >
                   {exploded ? "Assemble seat" : "Explode seat"}
@@ -145,7 +161,15 @@ export function ProductSection() {
           <p>Protective material, considered from the inside out.</p>
           <div className="part-controls" aria-label="Seat material details">
             {productParts.map((item, i) => (
-              <button key={item.id} aria-pressed={part === i} onClick={() => setPart(i)}>
+              <button
+                key={item.id}
+                aria-pressed={part === i}
+                onClick={(event) => {
+                  setImmediate(event.detail === 0);
+                  setPart(i);
+                  if (inspect && item.id === "protective") setExploded(true);
+                }}
+              >
                 <span>0{i + 1}</span>
                 {item.title}
                 <Plus size={14} aria-hidden="true" />

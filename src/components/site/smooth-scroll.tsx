@@ -11,7 +11,7 @@ export function SmoothScroll() {
       "(min-width: 60rem) and (prefers-reduced-motion: no-preference) and (pointer: fine)",
       () => {
         const lenis = new Lenis({
-          duration: 1,
+          duration: 0.65,
           smoothWheel: true,
           syncTouch: false,
           anchors: false,

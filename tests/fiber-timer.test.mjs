@@ -1,0 +1,21 @@
+import { expect, it, vi } from "vitest";
+import { Timer } from "three";
+import { createFiberTimer } from "../scripts/fiber-timer.mjs";
+it("preserves R3F delta, pause, restart and elapsed-time semantics using Timer", () => {
+  let now = 0;
+  const mock = vi.spyOn(performance, "now").mockImplementation(() => now);
+  const clock = createFiberTimer(Timer);
+  expect(clock.getDelta()).toBe(0);
+  now = 100;
+  expect(clock.getDelta()).toBeCloseTo(0.1);
+  clock.stop();
+  now = 10000;
+  expect(clock.getDelta()).toBe(0);
+  clock.start();
+  now = 10050;
+  expect(clock.getDelta()).toBeCloseTo(0.05);
+  expect(clock.elapsedTime).toBeCloseTo(0.05);
+  clock.elapsedTime = 2;
+  expect(clock.elapsedTime).toBe(2);
+  mock.mockRestore();
+});

@@ -9,10 +9,10 @@ There is no sound, occupied bus, passenger, human impact, or operational weapon 
 
 ```sh
 npm ci
-npm run dev
+npm run dev -- --port 3001
 ```
 
-The development server uses port 3000, or the next available port.
+The command above serves the development site at http://localhost:3001.
 The lockfile records the tested package versions.
 Node.js 22 or later is recommended; this prototype was built with Node.js 26.
 
@@ -39,6 +39,7 @@ Install browser binaries once with `npx playwright install chromium webkit`.
 - Lenis as the sole smooth-scroll engine, synchronized with the GSAP ticker.
 - Motion for the small product-description transition.
 - Three.js, React Three Fiber, and Drei for replaceable conceptual scene assets.
+- React Three Postprocessing for restrained HDR bloom in the opening firing sequence.
 - Zod for contact validation, Vitest for logic, and Playwright / axe-core for browser checks.
 
 No CMS, authentication, database, API route, or server-dependent contact action is included.
@@ -84,6 +85,8 @@ tests/                  Unit tests and production browser checks
 `timeline/phases.ts` defines the named phases, chapter stops, event timing, scroll distance, and scrub amount.
 `timeline/story-state.ts` defines the artistic camera positions, camera targets, focal changes, projectile movement, fracture, material response, assembly, and exploded-view channels.
 All coordinates are artistic scene units, not physical measurements or test specifications.
+Shape-preserving cubic interpolation smooths camera direction changes without overshooting authored holds.
+The shared protective panel aligns with its seat-part transform at the integration handoff.
 
 `use-ballistic-timeline.ts` owns a single GSAP timeline and one pinned ScrollTrigger.
 Its normalized progress samples a shared scene state and requests a Three.js frame.
@@ -101,7 +104,9 @@ The initial page contains complete HTML and a compressed textile poster.
 The ballistic scene bundle is requested only when the desktop story approaches the viewport.
 The separate product viewer loads only after “Inspect in 3D” is selected.
 Both canvases render on demand and cap device pixel ratio at 1.5.
-There is no idle rotation, audio, full-screen postprocessing, or continuously running WebGL loop.
+Bloom runs only in the opening sequence; material and product shots use the base lighting directly.
+There is no idle rotation, audio, or continuously running WebGL loop.
+A matching first-shot poster covers scene preparation and the first rendered frame.
 Timeline updates do not request renders while the document is hidden.
 GSAP contexts, Lenis, event listeners, geometry, and textures are cleaned up on teardown.
 
@@ -190,3 +195,16 @@ Verified content should replace the centralized company, story, and product data
 See `docs/asset-provenance.md` for artwork, models, font licenses, and the exact image-generation prompt.
 Implementation references: [Next.js static exports](https://nextjs.org/docs/app/guides/static-exports), [Next.js lazy loading](https://nextjs.org/docs/app/guides/lazy-loading), [Lenis GSAP integration](https://github.com/darkroomengineering/lenis), and [React Three Fiber rendering on demand](https://r3f.docs.pmnd.rs/advanced/scaling-performance).
 The matching local Next.js package documentation was also checked during implementation.
+
+
+## Second-pass review and compatibility
+
+See [the second-pass report](docs/quality-pass-verification.md) for matching before-and-after captures, production measurements, tests, sources, and limitations.
+Generated review files live under the ignored review-artifacts/quality-pass directory.
+The reproducible capture scripts are quality-capture.mjs, quality-interactions.mjs, and quality-performance.mjs under scripts.
+
+The installed R3F 9.7 package still constructs Three's deprecated Clock.
+The version-guarded postinstall script replaces that constructor with the supported Timer behind R3F's existing clock interface.
+It changes no other renderer behavior and does not silence warnings.
+Reassess this small compatibility patch when changing the pinned renderer version.
+Both canvases explicitly use the supported percentage shadow option.

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { storyContent } from "../data/story-content";
+import { storyContent, seatLayerContent } from "../data/story-content";
 export function StoryFallback() {
   return (
     <div className="story-fallback">
@@ -36,12 +36,14 @@ export function StoryFallback() {
             )}
             <small>{stage.detail}</small>
             {stage.id === "seat" && (
-              <ul>
-                <li>Upholstery</li>
-                <li>Protective layer</li>
-                <li>Comfort layer</li>
-                <li>Seat structure</li>
-              </ul>
+              <dl className="fallback-layer-details">
+                {seatLayerContent.map((part) => (
+                  <div key={part.label}>
+                    <dt>{part.label}</dt>
+                    <dd>{part.description}</dd>
+                  </div>
+                ))}
+              </dl>
             )}
           </div>
         </article>

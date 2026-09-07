@@ -35,7 +35,7 @@ test("desktop chapters reverse and product inspection works", async ({ page, isM
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.locator("#story")).toHaveClass(/cinematic/);
-  await expect(page.locator(".scene-canvas canvas")).toHaveCount(0);
+  await expect(page.locator(".scene-poster img")).toBeAttached();
   await page.getByRole("link", { name: "Enter the test" }).click();
   await expect(page.locator(".scene-canvas canvas")).toBeVisible();
   await expect(page.locator(".scene-loading")).toHaveCount(0);
@@ -176,4 +176,85 @@ test("keyboard entry and visible focus work without canvas focus", async ({ page
   await page.keyboard.press("Enter");
   await expect(page.locator("#contact")).toBeInViewport();
   await expect(page.locator("canvas[tabindex='0']")).toHaveCount(0);
+});
+
+test("impact settles, reverses deterministically, and final contact navigation lands visibly", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Phone uses the complete illustrated story.");
+  const warnings: string[] = [];
+  page.on("console", (m) => {
+    if (m.type() === "warning" && /deprecated/i.test(m.text())) warnings.push(m.text());
+  });
+  await page.goto("/");
+  await page.getByRole("link", { name: "Enter the test" }).click();
+  const canvas = page.locator(".scene-canvas canvas");
+  await expect(page.locator(".scene-canvas")).toHaveAttribute("data-ready", "true");
+  const top = await page
+    .locator("#story")
+    .evaluate((el) => el.getBoundingClientRect().top + scrollY);
+  const jump = async (p: number) => {
+    await page.evaluate(({ top, p }) => scrollTo({ top: top + p * 7800, behavior: "instant" }), {
+      top,
+      p,
+    });
+    await expect
+      .poll(async () => Number(await canvas.getAttribute("data-progress")))
+      .toBeCloseTo(p, 2);
+    await page.waitForTimeout(350);
+  };
+  await jump(0.64);
+  const stopped = await canvas.getAttribute("data-projectile-z");
+  const frame = await canvas.getAttribute("data-render-frame");
+  await page.waitForTimeout(450);
+  expect(await canvas.getAttribute("data-render-frame")).toBe(frame);
+  await jump(0.65);
+  expect(await canvas.getAttribute("data-projectile-z")).toBe(stopped);
+  await jump(0.23);
+  await jump(0.64);
+  expect(await canvas.getAttribute("data-projectile-z")).toBe(stopped);
+  await jump(0.99);
+  await page.locator(".seat-reveal-actions").getByRole("link", { name: "Contact Redline" }).click();
+  await expect(page.locator("#contact")).toBeInViewport();
+  expect(warnings).toEqual([]);
+});
+
+test("every inspector part responds, repeated actions settle, and the base renderer remains usable", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "Inspector is deliberately desktop only.");
+  await page.goto("/?effects=off");
+  await page.getByRole("link", { name: "Enter the test" }).click();
+  await expect(page.locator(".scene-canvas canvas")).toHaveAttribute("data-effects", "off");
+  await page.getByRole("link", { name: "Skip to product" }).click();
+  await page.getByRole("button", { name: "Inspect in 3D" }).click();
+  const canvas = page.locator(".product-canvas canvas");
+  for (const [name, id] of [
+    ["Protective fabric", "protective"],
+    ["Seat structure", "structure"],
+    ["Upholstery", "upholstery"],
+  ]) {
+    await page
+      .locator(".part-controls")
+      .getByRole("button", { name: new RegExp(name) })
+      .click();
+    await expect(canvas).toHaveAttribute("data-selected-part", id);
+    await expect(page.locator(".viewer-selection")).toContainText(name);
+  }
+  for (let i = 0; i < 4; i++) await page.getByRole("button", { name: "Rotate seat right" }).click();
+  for (let i = 0; i < 2; i++) await page.getByRole("button", { name: "Rotate seat left" }).click();
+  await expect
+    .poll(async () => Number(await canvas.getAttribute("data-rotation")))
+    .toBeCloseTo(0.6, 2);
+  await page.getByRole("button", { name: "Assemble seat", exact: true }).click();
+  await expect(canvas).toHaveAttribute("data-exploded", "0.0000");
+  await page.waitForTimeout(300);
+  const frame = await canvas.getAttribute("data-render-frame");
+  await page.waitForTimeout(450);
+  expect(await canvas.getAttribute("data-render-frame")).toBe(frame);
+  await page.getByRole("button", { name: "Explode seat", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(canvas).toHaveAttribute("data-exploded", "1.0000");
 });

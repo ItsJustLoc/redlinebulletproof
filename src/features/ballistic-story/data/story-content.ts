@@ -47,3 +47,20 @@ export const storyContent = [
     image: "/images/product/story-seat.webp",
   },
 ] as const;
+
+export const seatLayerContent = [
+  { label: "Upholstery", description: "The illustrated outer seating surface." },
+  {
+    label: "Protective layer",
+    description:
+      "The same Redline textile concept shown in the material study, positioned within the seat.",
+  },
+  {
+    label: "Comfort layer",
+    description: "Conceptual cushioning, separated here to explain the arrangement.",
+  },
+  {
+    label: "Seat structure",
+    description: "The supporting shell and frame of the detached concept seat.",
+  },
+] as const;

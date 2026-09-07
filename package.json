@@ -9,12 +9,14 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "postinstall": "node scripts/patch-fiber-timer.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.3.3",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "gsap": "^3.15.0",
@@ -22,6 +24,7 @@
     "lucide-react": "^1.41.0",
     "motion": "^13.2.0",
     "next": "^16.3.4",
+    "postprocessing": "^6.39.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwind-merge": "^3.6.0",

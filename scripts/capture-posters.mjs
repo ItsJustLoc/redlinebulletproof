@@ -12,7 +12,7 @@ const top = await page
   .locator("#story")
   .evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 for (const [name, p] of [
-  ["test", 0.025],
+  ["test", 0],
   ["glass", 0.277],
   ["fabric", 0.39],
   ["redline", 0.61],
@@ -28,6 +28,9 @@ for (const [name, p] of [
     style:
       ".story-overlay,.story-progress,.scene-loading,nextjs-portal{visibility:hidden!important}",
   });
+  if (name === "test") {
+    await sharp(image).webp({ quality: 86 }).toFile("public/images/product/story-loading.webp");
+  }
   // Crop the composition to retain the physical object, then produce responsive stills.
   const region =
     name === "test"

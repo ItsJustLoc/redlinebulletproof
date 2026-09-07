@@ -1,10 +1,10 @@
 import { ArrowDown, ArrowUpRight } from "lucide-react";
-import { storyContent } from "../data/story-content";
+import { storyContent, seatLayerContent } from "../data/story-content";
 export function StoryOverlay({ stage, phase }: { stage: number; phase: string }) {
   const content = storyContent[stage];
   const impact = phase === "REDLINE_IMPACT";
   return (
-    <div className="story-overlay">
+    <div className="story-overlay" data-shot={phase}>
       <div className="stage-copy" key={content.id}>
         <p className="eyebrow">
           <span className="signal-dot" />
@@ -26,20 +26,29 @@ export function StoryOverlay({ stage, phase }: { stage: number; phase: string })
             ? "The fabric deforms. The movement disperses. The scene becomes still. A conceptual expression of the protective intent."
             : content.body}
         </p>
-        <p className="stage-detail">{content.detail}</p>
+
         {stage === 4 && (
-          <a className="text-action" href="#product">
-            Explore the application <ArrowUpRight size={16} aria-hidden="true" />
-          </a>
+          <div className="seat-reveal-actions">
+            {phase === "PRODUCT_REVEAL" && (
+              <a className="button button-primary" href="#contact">
+                Contact Redline <ArrowUpRight size={16} aria-hidden="true" />
+              </a>
+            )}
+            <a className="text-action" href="#product">
+              Explore the application <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          </div>
         )}
       </div>
       {phase === "EXPLODED_VIEW" && (
-        <div className="exploded-labels">
-          <span>Upholstery</span>
-          <span>Comfort layer</span>
-          <span>Protective layer</span>
-          <span>Seat structure</span>
-        </div>
+        <dl className="sr-only">
+          {seatLayerContent.map((part) => (
+            <div key={part.label}>
+              <dt>{part.label}</dt>
+              <dd>{part.description}</dd>
+            </div>
+          ))}
+        </dl>
       )}
       <div className="scene-topline">
         <span>Redline / Material study</span>

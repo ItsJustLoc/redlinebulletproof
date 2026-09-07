@@ -15,65 +15,89 @@ export type StoryState = {
   assembly: number;
   exploded: number;
   seatTurn: number;
+  flash: number;
 };
-// Artistic shot coordinates, not physical test measurements.
-const shots = [
-  [0, 2.0, 2.0, 12.8, -0.8, 0.7, 2, 42],
-  [0.075, 1.7, 1.65, 11.5, -0.6, 1, 6, 40],
-  [0.115, 2.4, 1.4, 8.8, -0.45, 1, 7.2, 37],
-  [0.2, 3.8, 1.65, 5.8, -0.9, 1, 3.5, 40],
-  [0.255, 3.1, 1.5, 6, -0.7, 1, 3, 38],
-  [0.31, 3.8, 1.8, 3.7, -0.8, 1, 1.7, 42],
-  [0.365, 2.8, 1.5, 2.8, -0.7, 1, 0, 39],
-  [0.425, 3, 1.8, 0.5, -0.5, 1, -1, 42],
-  [0.48, 2.1, 1.5, -0.5, -0.45, 1, -3, 43],
-  [0.545, 2.3, 1.7, -0.15, -0.6, 1, -3, 42],
-  [0.61, 3.0, 1.6, -1.3, -0.7, 1, -3, 42],
-  [0.67, 5.0, 3.0, 6.4, -1.4, 0.3, -3, 40],
-  [0.79, 5.0, 2.7, 4.7, -1.2, 0.25, -3, 37],
-  [0.88, 5.8, 2.5, 5.8, -1.2, 0.3, -2.5, 40],
-  [1, 4.3, 2.2, 4.4, -1, 0.1, -2.7, 38],
+// Authored cinematic coordinates only, never physical test measurements.
+export const CAMERA_SHOTS = [
+  [0, -1.65, 2.05, 12.8, -1.6, 0.7, 2, 42],
+  [0.075, -1.5, 1.8, 11.7, -1.3, 0.8, 4.8, 42],
+  [0.105, -1.5, 1.8, 11.7, -1.3, 0.8, 4.8, 42],
+  [0.14, 1.3, 1.7, 9.6, -1, 1, 6.7, 40],
+  [0.2, 2.4, 1.65, 7.3, -0.9, 1, 4.1, 40],
+  [0.255, 2.9, 1.6, 6.3, -0.95, 1, 3, 40],
+  [0.31, 3.1, 1.75, 4.4, -0.9, 1, 1.9, 41],
+  [0.365, 2.65, 1.55, 3.1, -0.8, 1, 0.1, 40],
+  [0.425, 2.7, 1.7, 1, -0.7, 1, -1.25, 41],
+  [0.48, 2.1, 1.65, -0.1, -0.7, 1, -3, 42],
+  [0.55, 2.25, 1.6, -0.25, -0.72, 1, -3, 42],
+  [0.625, 2.75, 1.65, -0.65, -0.7, 1, -3, 42],
+  [0.65, 2.9, 1.72, -0.5, -0.75, 0.9, -3, 42],
+  [0.7, 5.8, 3.1, 7.8, -1.55, 0.3, -2.7, 40],
+  [0.79, 5.9, 2.7, 6.5, -1.45, 0.3, -2.7, 39],
+  [0.85, 7.5, 3.4, 8, -1.6, 0.4, -2.2, 40],
+  [0.905, 7.5, 3.4, 8, -1.6, 0.4, -2.2, 40],
+  [1, 4.7, 2.4, 5.7, -1.25, 0.1, -2.7, 38],
 ] as const;
 const projectileKeys = [
-  [0, 9],
-  [0.085, 9],
+  [0, 8.8],
+  [0.085, 8.8],
   [0.115, 7.7],
-  [0.21, 4.2],
-  [0.262, 3],
-  [0.32, 1.5],
-  [0.37, 0],
-  [0.43, -1.35],
-  [0.53, -2.25],
-  [0.56, -2.68],
-  [1, -2.68],
+  [0.21, 4.4],
+  [0.262, 3.27],
+  [0.32, 1.55],
+  [0.37, 0.27],
+  [0.43, -1.22],
+  [0.53, -2.45],
+  [0.55, -2.722],
+  [1, -2.722],
 ] as const;
-function sample(keys: readonly (readonly number[])[], p: number, column: number) {
-  const index = Math.max(
-    0,
-    keys.findIndex((key, i) => i < keys.length - 1 && p <= keys[i + 1][0]),
-  );
+// Shape-preserving cubic Hermite interpolation keeps shot direction changes smooth,
+// while avoiding overshoot into the objects or past an authored hold.
+export function samplePath(keys: readonly (readonly number[])[], p: number, column: number) {
+  let index = keys.findIndex((key, i) => i < keys.length - 1 && p <= keys[i + 1][0]);
+  if (index < 0) index = keys.length - 2;
   const a = keys[index],
-    b = keys[Math.min(index + 1, keys.length - 1)];
-  const t = range(p, a[0], b[0]);
-  return a[column] + (b[column] - a[column]) * t;
+    b = keys[index + 1],
+    dt = b[0] - a[0],
+    t = range(p, a[0], b[0]);
+  const slope = (i: number) =>
+    (keys[i + 1][column] - keys[i][column]) / (keys[i + 1][0] - keys[i][0]);
+  const tangent = (i: number) => {
+    if (i === 0) return slope(0);
+    if (i === keys.length - 1) return slope(i - 1);
+    const left = slope(i - 1),
+      right = slope(i);
+    return left * right <= 0 ? 0 : (2 * left * right) / (left + right);
+  };
+  return (
+    (2 * t * t * t - 3 * t * t + 1) * a[column] +
+    (t * t * t - 2 * t * t + t) * dt * tangent(index) +
+    (-2 * t * t * t + 3 * t * t) * b[column] +
+    (t * t * t - t * t) * dt * tangent(index + 1)
+  );
 }
+const smooth = (t: number) => t * t * (3 - 2 * t);
 export function updateStoryState(state: StoryState, progress: number) {
   state.progress = progress;
-  state.cameraX = sample(shots, progress, 1);
-  state.cameraY = sample(shots, progress, 2);
-  state.cameraZ = sample(shots, progress, 3);
-  state.targetX = sample(shots, progress, 4);
-  state.targetY = sample(shots, progress, 5);
-  state.targetZ = sample(shots, progress, 6);
-  state.fov = sample(shots, progress, 7);
-  state.projectileZ = sample(projectileKeys, progress, 1);
-  state.glassBreak = range(progress, EVENTS.glassImpact, 0.31);
+  [
+    state.cameraX,
+    state.cameraY,
+    state.cameraZ,
+    state.targetX,
+    state.targetY,
+    state.targetZ,
+    state.fov,
+  ] = [1, 2, 3, 4, 5, 6, 7].map((c) => samplePath(CAMERA_SHOTS, progress, c));
+  state.projectileZ = samplePath(projectileKeys, progress, 1);
+  state.glassBreak = smooth(range(progress, EVENTS.glassImpact, 0.31));
   state.fabricBreak = range(progress, EVENTS.fabricImpact, 0.415);
-  state.impact = range(progress, EVENTS.redlineImpact, 0.625);
-  if (progress >= EVENTS.redlineImpact) state.projectileZ = -2.795 - 0.34 * state.impact;
-  state.assembly = range(progress, EVENTS.assembly, 0.79);
-  state.exploded = range(progress, 0.805, 0.85) * (1 - range(progress, 0.905, 0.975));
-  state.seatTurn = range(progress, 0.93, 1) * -0.3;
+  state.impact = 1 - Math.pow(1 - range(progress, EVENTS.redlineImpact, 0.625), 3);
+  if (progress >= EVENTS.redlineImpact) state.projectileZ = -2.722 - 0.34 * state.impact;
+  state.assembly = smooth(range(progress, EVENTS.assembly, 0.79));
+  state.exploded =
+    smooth(range(progress, 0.805, 0.85)) * (1 - smooth(range(progress, 0.905, 0.975)));
+  state.seatTurn = smooth(range(progress, 0.93, 1)) * -0.3;
+  state.flash = smooth(range(progress, 0.085, 0.089)) * (1 - smooth(range(progress, 0.095, 0.112)));
 }
 export function createStoryState(): StoryState {
   const state = {
@@ -85,13 +109,14 @@ export function createStoryState(): StoryState {
     targetY: 0,
     targetZ: 0,
     fov: 42,
-    projectileZ: 9,
+    projectileZ: 8.8,
     glassBreak: 0,
     fabricBreak: 0,
     impact: 0,
     assembly: 0,
     exploded: 0,
     seatTurn: 0,
+    flash: 0,
   };
   updateStoryState(state, 0);
   return state;

@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useCinematicMode } from "../hooks/use-experience-mode";
@@ -15,6 +16,11 @@ export function BallisticStory() {
   const root = useRef<HTMLElement>(null),
     invalidate = useRef(() => {});
   const [state] = useState(createStoryState);
+  const [effects] = useState(
+    () =>
+      typeof window === "undefined" ||
+      new URLSearchParams(window.location.search).get("effects") !== "off",
+  );
   const [stage, setStage] = useState(0),
     [phase, setPhase] = useState("TEST_READY");
   const [near, setNear] = useState(false),
@@ -29,7 +35,7 @@ export function BallisticStory() {
           observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -12% 0px" },
+      { rootMargin: "240px 0px" },
     );
     if (root.current) observer.observe(root.current);
     return () => observer.disconnect();
@@ -66,10 +72,19 @@ export function BallisticStory() {
     >
       {/* Keep the pinned node mounted so ScrollTrigger can unwrap it before React removes it. */}
       <div className="story-frame" hidden={!cinematic}>
-        <div className="scene-canvas" aria-hidden="true">
+        <div className="scene-poster" aria-hidden="true">
+          <Image src="/images/product/story-loading.webp" alt="" fill sizes="100vw" />
+        </div>
+        <div className="scene-canvas" data-ready={ready} aria-hidden="true">
           {cinematic && near && (
             <SceneErrorBoundary onError={onFailure}>
-              <Scene state={state} onReady={onReady} onFailure={onFailure} />
+              <Scene
+                state={state}
+                phase={phase}
+                effects={effects}
+                onReady={onReady}
+                onFailure={onFailure}
+              />
             </SceneErrorBoundary>
           )}
         </div>

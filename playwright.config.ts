@@ -18,7 +18,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 960 } },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 960 },
+        launchOptions: { args: process.platform === "darwin" ? ["--use-angle=metal"] : [] },
+      },
     },
     { name: "mobile-webkit", use: { ...devices["iPhone 13"], browserName: "webkit" } },
   ],
