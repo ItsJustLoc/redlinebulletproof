@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { registerImmediateScroller } from "@/lib/scroll";
 export function SmoothScroll() {
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
@@ -15,6 +16,10 @@ export function SmoothScroll() {
           smoothWheel: true,
           syncTouch: false,
           anchors: false,
+        });
+        const releaseScroller = registerImmediateScroller((top) => {
+          lenis.resize();
+          lenis.scrollTo(top, { immediate: true });
         });
         // Resolve anchors after layout settles; keyboard navigation never waits for a tween.
         let anchorFrame = 0;
@@ -60,6 +65,7 @@ export function SmoothScroll() {
           cancelAnimationFrame(anchorFrame);
           document.removeEventListener("click", anchor);
           gsap.ticker.remove(tick);
+          releaseScroller();
           lenis.destroy();
           gsap.ticker.lagSmoothing(500, 33);
         };

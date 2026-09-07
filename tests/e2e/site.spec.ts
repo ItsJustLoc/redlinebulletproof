@@ -30,7 +30,7 @@ test("title, navigation, and honest contact preview", async ({ page }) => {
 });
 
 test("desktop chapters reverse and product inspection works", async ({ page, isMobile }) => {
-  test.skip(isMobile, "Mobile intentionally uses the illustrated reading flow.");
+  test.skip(isMobile, "The separate product inspector remains desktop only.");
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
@@ -130,8 +130,7 @@ test("responsive page has no horizontal overflow and passes automated accessibil
   expect(results.violations).toEqual([]);
 });
 
-test("WebGL loss switches to the illustrated reading flow", async ({ page, isMobile }) => {
-  test.skip(isMobile, "Mobile does not allocate a WebGL context.");
+test("WebGL loss switches to the illustrated reading flow", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("link", { name: "Enter the test" }).click();
   await expect(page.locator(".scene-loading")).toHaveCount(0);
@@ -145,11 +144,7 @@ test("WebGL loss switches to the illustrated reading flow", async ({ page, isMob
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
 });
 
-test("changing motion preference at runtime releases the pinned canvas", async ({
-  page,
-  isMobile,
-}) => {
-  test.skip(isMobile, "Mobile starts with the reading flow.");
+test("changing motion preference at runtime releases the pinned canvas", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");

@@ -2,6 +2,7 @@
 import { useLayoutEffect, type RefObject } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { scrollImmediately } from "@/lib/scroll";
 import { PHASES, phaseAt, STORY_SCROLL } from "./phases";
 import { updateStoryState, type StoryState } from "./story-state";
 gsap.registerPlugin(ScrollTrigger);
@@ -45,8 +46,26 @@ export function useBallisticTimeline({
       timeline.to(driver, { progress: 1, duration: 1, ease: "none" }, 0);
     }, root);
     let alive = true;
+    const navigation = performance.getEntriesByType("navigation")[0] as
+      PerformanceNavigationTiming | undefined;
+    const savedScroll: unknown = history.state?.redlineStoryScroll;
+    const saveScroll = () => {
+      history.replaceState({ ...history.state, redlineStoryScroll: window.scrollY }, "");
+    };
+    window.addEventListener("pagehide", saveScroll);
+    window.addEventListener("scrollend", saveScroll);
     document.fonts.ready.then(() => {
-      if (alive) ScrollTrigger.refresh();
+      if (!alive) return;
+      ScrollTrigger.refresh();
+      // The shorter server-rendered reading flow can clamp native restoration before pinning exists.
+      if (
+        navigation?.type === "reload" &&
+        typeof savedScroll === "number" &&
+        Number.isFinite(savedScroll)
+      ) {
+        scrollImmediately(savedScroll);
+        ScrollTrigger.update();
+      }
     });
     const visible = () => {
       if (!document.hidden) invalidate.current();
@@ -56,6 +75,8 @@ export function useBallisticTimeline({
       alive = false;
       context.revert();
       document.removeEventListener("visibilitychange", visible);
+      window.removeEventListener("pagehide", saveScroll);
+      window.removeEventListener("scrollend", saveScroll);
     };
   }, [enabled, root, state, update, invalidate]);
 }

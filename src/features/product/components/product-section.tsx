@@ -1,14 +1,21 @@
 "use client";
 import dynamic from "next/dynamic";
+import { prepareSurfaceMaps } from "@/features/ballistic-story/scene/materials/prepare-surface-maps";
 import Image from "next/image";
 import { useCallback, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowDownRight, ArrowUpRight, Box, Plus, RotateCcw, RotateCw, X } from "lucide-react";
 import { productParts, productValues } from "../data/product";
 import { company } from "@/data/company";
-import { useCinematicMode } from "@/features/ballistic-story/hooks/use-experience-mode";
+import { useProductInspectionMode } from "@/features/ballistic-story/hooks/use-experience-mode";
 import { SceneErrorBoundary } from "@/features/ballistic-story/components/scene-error-boundary";
-const Viewer = dynamic(() => import("./product-viewer"), { ssr: false });
+const Viewer = dynamic(
+  async () => {
+    const [scene] = await Promise.all([import("./product-viewer"), prepareSurfaceMaps()]);
+    return scene;
+  },
+  { ssr: false },
+);
 export function ProductSection() {
   const [part, setPart] = useState(0),
     [inspect, setInspect] = useState(false),
@@ -16,7 +23,7 @@ export function ProductSection() {
     [rotation, setRotation] = useState(0),
     [exploded, setExploded] = useState(false),
     [failed, setFailed] = useState(false);
-  const allow3d = useCinematicMode() && !failed;
+  const allow3d = useProductInspectionMode() && !failed;
   const reduce = useReducedMotion();
   const failure = useCallback(() => {
     setFailed(true);

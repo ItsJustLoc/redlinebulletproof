@@ -1373,3 +1373,127 @@ img {
   margin: 0;
   max-width: 48ch;
 }
+
+/* Keep the authored camera path on touch screens; reserve room for the HTML copy. */
+@media (max-width: 959px) {
+  .story-frame {
+    min-height: 560px;
+  }
+  .scene-canvas,
+  .scene-poster {
+    top: 32%;
+    bottom: 14%;
+    left: -60%;
+    width: 160%;
+  }
+  .story-overlay,
+  .story-overlay[data-shot="TEST_READY"],
+  .story-overlay[data-shot="FIRE"] {
+    background: linear-gradient(
+      180deg,
+      #080a0c 0%,
+      rgba(8, 10, 12, 0.88) 27%,
+      transparent 48%,
+      transparent 74%,
+      #080a0c 90%
+    );
+  }
+  .scene-topline {
+    top: 1.5rem;
+    font-size: 0.625rem;
+  }
+  .stage-copy {
+    top: 12%;
+    width: calc(100% - var(--gutter) * 2);
+  }
+  .stage-copy h2 {
+    font-size: clamp(2rem, 7.5vw, 3rem);
+    margin-top: 0.6rem;
+  }
+  .stage-copy h2 span {
+    display: inline;
+  }
+  .stage-copy h2 span + span::before {
+    content: " ";
+  }
+  .stage-body {
+    max-width: 48ch;
+    margin-top: 0.65rem;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+  .stage-detail {
+    margin-top: 0.5rem;
+  }
+  .scene-footnote {
+    bottom: 5.4rem;
+    font-size: 0.625rem;
+  }
+  .scene-footnote small {
+    font-size: 0.625rem;
+  }
+  .scroll-cue {
+    display: none;
+  }
+  .story-progress {
+    bottom: 0.9rem;
+  }
+  .story-progress button {
+    gap: 0.25rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.025em;
+  }
+  .story-progress button[aria-current="step"]::after {
+    margin-left: 0;
+  }
+  .seat-reveal-actions {
+    flex-direction: row;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+  }
+  .seat-reveal-actions .button {
+    min-height: 44px;
+    padding: 0.75rem;
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+  .seat-reveal-actions .text-action {
+    gap: 0.5rem;
+    font-size: 0.7rem;
+  }
+  .scene-loading {
+    right: var(--gutter);
+    left: var(--gutter);
+    bottom: 25%;
+    padding: 1rem;
+  }
+  .seat-part-label {
+    font-size: 0.625rem;
+  }
+}
+@media (max-width: 959px) and (max-height: 560px) and (orientation: landscape) {
+  .story-frame {
+    min-height: 0;
+  }
+  .scene-canvas,
+  .scene-poster {
+    inset: 0;
+    width: 100%;
+  }
+  .story-overlay {
+    background: linear-gradient(90deg, #080a0c, rgba(8, 10, 12, 0.85) 32%, transparent 60%);
+  }
+  .stage-copy {
+    top: 19%;
+    width: 40%;
+  }
+  .stage-copy h2 {
+    font-size: 1.8rem;
+  }
+  .stage-body {
+    font-size: 0.75rem;
+  }
+  .scene-footnote {
+    display: none;
+  }
+}

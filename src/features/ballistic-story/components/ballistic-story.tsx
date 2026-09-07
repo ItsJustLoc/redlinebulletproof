@@ -1,8 +1,10 @@
 "use client";
 import dynamic from "next/dynamic";
+import { prepareSurfaceMaps } from "@/features/ballistic-story/scene/materials/prepare-surface-maps";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { scrollImmediately } from "@/lib/scroll";
 import { useCinematicMode } from "../hooks/use-experience-mode";
 import { useBallisticTimeline } from "../timeline/use-ballistic-timeline";
 import { createStoryState } from "../timeline/story-state";
@@ -11,7 +13,13 @@ import { StoryOverlay } from "../overlays/story-overlay";
 import { StoryProgress } from "../overlays/story-progress";
 import { StoryFallback } from "./story-fallback";
 import { SceneErrorBoundary } from "./scene-error-boundary";
-const Scene = dynamic(() => import("../scene/BallisticScene"), { ssr: false });
+const Scene = dynamic(
+  async () => {
+    const [scene] = await Promise.all([import("../scene/BallisticScene"), prepareSurfaceMaps()]);
+    return scene;
+  },
+  { ssr: false },
+);
 export function BallisticStory() {
   const root = useRef<HTMLElement>(null),
     invalidate = useRef(() => {});
@@ -49,6 +57,10 @@ export function BallisticStory() {
     invalidate.current = render;
     setReady(true);
     render();
+    return () => {
+      invalidate.current = () => {};
+      setReady(false);
+    };
   }, []);
   const onFailure = useCallback(() => {
     setFailed(true);
@@ -56,10 +68,7 @@ export function BallisticStory() {
   function select(index: number) {
     const trigger = ScrollTrigger.getById("ballistic-story");
     if (trigger)
-      window.scrollTo({
-        top: trigger.start + STAGE_STOPS[index] * (trigger.end - trigger.start) + 1,
-        behavior: "instant",
-      });
+      scrollImmediately(trigger.start + STAGE_STOPS[index] * (trigger.end - trigger.start) + 1);
   }
   return (
     <section
@@ -71,7 +80,7 @@ export function BallisticStory() {
       data-phase={phase}
     >
       {/* Keep the pinned node mounted so ScrollTrigger can unwrap it before React removes it. */}
-      <div className="story-frame" hidden={!cinematic}>
+      <div className="story-frame" hidden={!cinematic} aria-busy={!ready}>
         <div className="scene-poster" aria-hidden="true">
           <Image src="/images/product/story-loading.webp" alt="" fill sizes="100vw" />
         </div>
@@ -90,7 +99,9 @@ export function BallisticStory() {
         </div>
         {!ready && (
           <div className="scene-loading">
-            <span className="eyebrow">Preparing the material study</span>
+            <span className="eyebrow" aria-live="polite">
+              Preparing the material study
+            </span>
             <button className="text-action" onClick={onFailure}>
               Read the illustrated story
             </button>

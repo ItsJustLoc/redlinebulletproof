@@ -43,7 +43,7 @@ Install browser binaries once with `npx playwright install chromium webkit`.
 - Zod for contact validation, Vitest for logic, and Playwright / axe-core for browser checks.
 
 No CMS, authentication, database, API route, or server-dependent contact action is included.
-Postprocessing was omitted because clear materials and lighting serve this prototype without its rendering cost.
+Opening bloom is retained; subsequent material and product shots use the base lighting directly.
 
 ## Repository structure
 
@@ -101,17 +101,21 @@ The supporting value section, product inspection, and contact form return to ord
 ## Rendering and fallback strategy
 
 The initial page contains complete HTML and a compressed textile poster.
-The ballistic scene bundle is requested only when the desktop story approaches the viewport.
+The ballistic scene bundle is requested when the story approaches the viewport, on desktop and mobile.
+The original 512-pixel procedural maps are prepared in a worker concurrently with the scene download.
 The separate product viewer loads only after “Inspect in 3D” is selected.
 Both canvases render on demand and cap device pixel ratio at 1.5.
 Bloom runs only in the opening sequence; material and product shots use the base lighting directly.
 There is no idle rotation, audio, or continuously running WebGL loop.
-A matching first-shot poster covers scene preparation and the first rendered frame.
+A matching first-shot poster covers shader preparation, first-use uploads, and the first completed GPU frame.
+The normal, opening, and flash lighting variants are prepared without changing authored materials or timing.
 Timeline updates do not request renders while the document is hidden.
 GSAP contexts, Lenis, event listeners, geometry, and textures are cleaned up on teardown.
 
-The cinematic mode requires a fine pointer, a viewport at least 960 pixels wide and 640 pixels tall, and no reduced-motion preference.
-Other devices receive an intentionally shorter five-chapter illustrated reading flow.
+The cinematic mode supports desktop and touch viewports unless reduced motion is requested or the scene fails.
+Portrait and landscape layouts retain the same cinematic story with a DPR cap of 1.5.
+Touch scrolling is native; desktop fine-pointer scrolling uses Lenis.
+Reduced-motion visitors receive an intentionally shorter five-chapter illustrated reading flow.
 Those stills were captured from the same Three.js scene rather than substituted with unrelated imagery.
 The text explicitly describes deformation, the conceptual projectile stop, and seat integration.
 JavaScript-disabled visitors receive the same full HTML reading flow.
@@ -208,3 +212,11 @@ The version-guarded postinstall script replaces that constructor with the suppor
 It changes no other renderer behavior and does not silence warnings.
 Reassess this small compatibility patch when changing the pinned renderer version.
 Both canvases explicitly use the supported percentage shadow option.
+
+## Startup performance pass
+
+See [the startup performance report](docs/startup-performance.md) for measured bottlenecks, before/after results, rejected experiments, mobile behavior, and verification limits.
+Run `PREVIEW_URL=http://localhost:3100 node scripts/startup-performance.mjs final` against a production export to repeat the browser measurements.
+Run `node scripts/startup-trace.mjs final` to capture the Chrome trace, CPU profile, and scene screenshots.
+The exported `serve.json` configures immutable caching of hashed Next.js assets in the local preview.
+For S3/CloudFront, apply the equivalent cache metadata during deployment; the local preview config does not configure AWS.
