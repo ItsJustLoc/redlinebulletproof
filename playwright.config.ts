@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+const liveURL = process.env.PLAYWRIGHT_BASE_URL;
 export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: false,
@@ -6,15 +7,17 @@ export default defineConfig({
   timeout: 45000,
   expect: { timeout: 8000 },
   use: {
-    baseURL: "http://localhost:3100",
+    baseURL: liveURL ?? "http://localhost:3100",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "npx serve out -l 3100",
-    url: "http://localhost:3100",
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: liveURL
+    ? undefined
+    : {
+        command: "npx serve out -l 3100",
+        url: "http://localhost:3100",
+        reuseExistingServer: !process.env.CI,
+      },
   projects: [
     {
       name: "chromium",

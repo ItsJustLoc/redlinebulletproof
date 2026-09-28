@@ -166,7 +166,41 @@ The component already distinguishes pending, accepted, and failure states for a 
 Keep the backend outside this static Next.js build and configure the corresponding CloudFront behavior or verified API origin when it exists.
 Do not remove the prototype notice until delivery is implemented and verified.
 
-## Static deployment: S3 + CloudFront
+## Static deployment: Cloudflare Pages
+
+The `redlinebulletproof` Pages project uses Direct Upload and serves https://redlinebulletproof.pages.dev.
+The custom domains `redlinebulletproof.com` and `www.redlinebulletproof.com` are attached to that project.
+Domain registration remains at GoDaddy.
+Cloudflare uses `etienne.ns.cloudflare.com` and `leanna.ns.cloudflare.com` for this domain.
+The Cloudflare DNS records for `@` and `www` are proxied CNAME records targeting `redlinebulletproof.pages.dev`, with automatic TTL.
+Custom-domain activation requires GoDaddy to delegate to those nameservers and Cloudflare to finish certificate validation.
+
+Build and verify the export before uploading it:
+
+```sh
+NEXT_PUBLIC_SITE_URL=https://redlinebulletproof.com npm run build
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e -- --workers=1
+npx --yes wrangler@4.129.1 pages deploy out --project-name=redlinebulletproof --branch=main --commit-dirty=true
+```
+
+Wrangler authenticates through the existing Cloudflare login stored in the local keyring.
+If another machine needs access, run `npx --yes wrangler@4.129.1 login --scopes account:read user:read pages:write zone:read --use-keyring` and approve the browser login.
+Never put Cloudflare credentials in this repository.
+The upload includes the current export, including any uncommitted source changes used to build it; review the working tree first.
+Direct Upload does not automatically deploy Git pushes, but a CI workflow can run the same build and Wrangler upload.
+Cloudflare requires a new Pages project to switch to its built-in Git integration.
+
+For later releases, roll back through the Pages deployment history to a previously successful production deployment.
+Before this migration, GoDaddy used `ns49.domaincontrol.com` and `ns50.domaincontrol.com`, with `A` records for `@` and `www` targeting `167.99.153.165` at a 600-second TTL.
+Those original GoDaddy records and the old server have been left intact; verify the old server is healthy before using it as a migration rollback.
+The contact form remains an explicitly labeled, non-sending prototype.
+
+References: [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/) and [Pages custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
+
+## Alternative static deployment: S3 + CloudFront
 
 The Next.js configuration sets `output: "export"`, `trailingSlash: true`, and unoptimized local images.
 No Node.js runtime is required to host `out/`.

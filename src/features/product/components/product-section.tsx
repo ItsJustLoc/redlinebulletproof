@@ -22,6 +22,7 @@ export function ProductSection() {
     [immediate, setImmediate] = useState(false),
     [rotation, setRotation] = useState(0),
     [exploded, setExploded] = useState(false),
+    [ready, setReady] = useState(false),
     [failed, setFailed] = useState(false);
   const allow3d = useProductInspectionMode() && !failed;
   const reduce = useReducedMotion();
@@ -66,16 +67,21 @@ export function ProductSection() {
       </div>
       <div className="product-study">
         <div className="product-visual">
-          <div className="product-image" aria-hidden={inspect && allow3d}>
+          <picture className="product-image">
+            <source
+              srcSet="/images/product/product-seat-750.webp 750w, /images/product/product-seat-1200.webp 1200w, /images/product/product-seat-2400.webp 2400w"
+              sizes="(max-width: 959px) 100vw, 60vw"
+            />
             <Image
-              src="/images/product/story-seat.webp"
+              aria-hidden={inspect && allow3d && ready}
+              src="/images/product/product-seat-1200.webp"
               alt="Conceptual detached school-bus bench seat with high upholstered back and a steel support frame, on an empty studio floor."
               fill
               sizes="(max-width: 960px) 100vw, 65vw"
             />
-          </div>
+          </picture>
           {inspect && allow3d && (
-            <div className="product-canvas" aria-hidden="true">
+            <div className="product-canvas" data-ready={ready} aria-hidden="true">
               <SceneErrorBoundary onError={failure}>
                 <Viewer
                   part={productParts[part].id}
@@ -83,6 +89,7 @@ export function ProductSection() {
                   exploded={exploded}
                   immediate={immediate}
                   onFailure={failure}
+                  onReady={setReady}
                 />
               </SceneErrorBoundary>
             </div>
@@ -98,7 +105,10 @@ export function ProductSection() {
                   className={`hotspot hotspot-${i}`}
                   aria-label={`Inspect ${item.title.toLowerCase()}`}
                   aria-pressed={part === i}
-                  onClick={() => setPart(i)}
+                  onClick={() => {
+                    setPart(i);
+                    if (inspect && item.id === "protective") setExploded(true);
+                  }}
                 >
                   <Plus size={16} aria-hidden="true" />
                 </button>
@@ -112,7 +122,13 @@ export function ProductSection() {
           )}
           <div className="viewer-controls">
             {allow3d && !inspect && (
-              <button className="button button-secondary" onClick={() => setInspect(true)}>
+              <button
+                className="button button-secondary"
+                onClick={() => {
+                  if (productParts[part].id === "protective") setExploded(true);
+                  setInspect(true);
+                }}
+              >
                 <Box size={16} aria-hidden="true" /> Inspect in 3D
               </button>
             )}

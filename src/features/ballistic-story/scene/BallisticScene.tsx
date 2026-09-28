@@ -25,7 +25,7 @@ function SceneController({
   effects,
   onPrepared,
 }: SceneProps & { onPrepared: () => void }) {
-  const { invalidate, gl, scene, camera } = useThree();
+  const { invalidate, gl, scene, camera, size } = useThree();
   const ready = useRef(false);
   useEffect(() => {
     let alive = true;
@@ -144,9 +144,13 @@ function SceneController({
     gl.domElement.dataset.impact = state.impact.toFixed(5);
     gl.domElement.dataset.flash = state.flash.toFixed(5);
     camera.position.set(state.cameraX, state.cameraY, state.cameraZ);
-    camera.lookAt(state.targetX, state.targetY, state.targetZ);
-    if (camera instanceof PerspectiveCamera && camera.fov !== state.fov) {
+    // The narrow mobile media area centers the subject; desktop keeps every authored coordinate.
+    const portrait = size.width < 960 && size.width / size.height < 1.35;
+    const zoom = portrait ? size.width / size.height / 1.35 : 1;
+    camera.lookAt(portrait ? 0 : state.targetX, state.targetY, state.targetZ);
+    if (camera instanceof PerspectiveCamera && (camera.fov !== state.fov || camera.zoom !== zoom)) {
       camera.fov = state.fov;
+      camera.zoom = zoom;
       camera.updateProjectionMatrix();
     }
     gl.info.reset();

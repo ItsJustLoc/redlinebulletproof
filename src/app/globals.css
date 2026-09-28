@@ -961,6 +961,12 @@ img {
   position: absolute;
   inset: 0;
 }
+.product-canvas {
+  opacity: 0;
+}
+.product-canvas[data-ready="true"] {
+  opacity: 1;
+}
 .product-image img {
   object-fit: cover;
   object-position: center;
@@ -1383,8 +1389,18 @@ img {
   .scene-poster {
     top: 32%;
     bottom: 14%;
-    left: -60%;
-    width: 160%;
+    left: 0;
+    width: 100%;
+  }
+  .product-study {
+    display: block;
+  }
+  .product-visual {
+    min-height: 0;
+    aspect-ratio: 5 / 4;
+  }
+  .product-image img {
+    object-fit: contain;
   }
   .story-overlay,
   .story-overlay[data-shot="TEST_READY"],

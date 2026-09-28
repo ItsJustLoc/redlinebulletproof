@@ -1,0 +1,22 @@
+{
+  "sourceCommit": "07ed27c44c31020413a98885ff55d674187168e7",
+  "referenceDirectory": "tests/e2e/desktop-appearance.spec.ts-snapshots",
+  "sha256": {
+    "1440-assembled-chromium-darwin.png": "95e369fc824b7230f4a8c1abca21345d26bbd090df256853850a220b9daa58c4",
+    "1440-fabric-chromium-darwin.png": "cbe4480271c9e535560b7f4e621a2e8aed4e229f2ec486081cb21861eb21eb99",
+    "1440-fire-chromium-darwin.png": "73a1f0c28320cabc25554b948d3da5c8799fbb9905bc42e27c07111e13fe7e6a",
+    "1440-glass-chromium-darwin.png": "474cbb9b0e96d5c9335bc51cf82e89afce673245d562866f0adcfe6970d6116a",
+    "1440-glass-impact-chromium-darwin.png": "0de3cb56ad9255fe29cca04913e07be0238c774e4eeef41720fc00483df81076",
+    "1440-redline-chromium-darwin.png": "e07d115f788bde84ffddf86ba4bc9e5a634d4fb3e43fb63ffd20b9dac073631e",
+    "1440-seat-chromium-darwin.png": "b71fe92e2ae4c258132cae06b2bf957f2a88e83215640132006152b021ea65f7",
+    "1440-test-chromium-darwin.png": "e476a049b80bc802e2d325746fdfd62786c9c576d184748dd416a1462a777ee6",
+    "1728-assembled-chromium-darwin.png": "3ccc108d650204fd594aec87b36440b2061b9bb37e03fa26e446ebbae12cd368",
+    "1728-fabric-chromium-darwin.png": "59bb92091ebc70e856b4a30e4ec3ec2d94c044f907f56c30c59a89d1623ba2b7",
+    "1728-fire-chromium-darwin.png": "8100316f2c2bdc2b9996852466751eb9809266c9fc9b4a03db9c86ae52a72d39",
+    "1728-glass-chromium-darwin.png": "f23d5e44fd7cd38d8932cb56cf95832523377b3a43daf91a9323851723b37650",
+    "1728-glass-impact-chromium-darwin.png": "1afd7570b6e953eb3c32d370bc23eeca08faf8a73e32207a4bd297530bf55735",
+    "1728-redline-chromium-darwin.png": "352f3b8036106fac738807674873f7f85fb24ec098458b7612ba6aecbaa608e6",
+    "1728-seat-chromium-darwin.png": "0159c9b2809000339908a937d76744c9661e23a103112286b78860172612c6af",
+    "1728-test-chromium-darwin.png": "6ccef6b4c4ab9dbc4c288c07970bde2ce15713698cfb583219342495e1b4adeb"
+  }
+}

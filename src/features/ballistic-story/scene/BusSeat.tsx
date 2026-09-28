@@ -1,6 +1,6 @@
 import { Html, Line, RoundedBox } from "@react-three/drei";
-import { useEffect, useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo, useRef, type ComponentRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { StoryState } from "../timeline/story-state";
 import { modelAssets, seatPartAssets } from "../data/assets";
@@ -12,20 +12,96 @@ function PartLabel({
   name,
   anchor,
   end,
+  order,
 }: {
   name: string;
   anchor: [number, number, number];
   end: [number, number, number];
+  order: number;
 }) {
+  const { gl, size, invalidate } = useThree();
+  const mobile = size.width < 960;
+  const label = useRef<HTMLSpanElement>(null);
+  const leader = useRef<ComponentRef<typeof Line>>(null);
+  const point = useMemo(() => new THREE.Vector3(), []);
+  const copyBounds = useRef({ top: 0, bottom: Infinity });
+  useLayoutEffect(() => {
+    if (!mobile) return;
+    const frame = gl.domElement.closest(".story-frame");
+    const copy = frame?.querySelector(".stage-copy");
+    const footnote = frame?.querySelector(".scene-footnote");
+    if (!copy || !footnote) return;
+    const measure = () => {
+      // Landscape copy sits beside the model and hides the footnote.
+      if (!footnote.getClientRects().length) {
+        copyBounds.current = { top: 0, bottom: Infinity };
+        invalidate();
+        return;
+      }
+      const canvasTop = gl.domElement.getBoundingClientRect().top;
+      copyBounds.current = {
+        top: copy.getBoundingClientRect().bottom - canvasTop + 16,
+        bottom: footnote.getBoundingClientRect().top - canvasTop - 12,
+      };
+      invalidate();
+    };
+    // Measure wrapped copy only on layout changes, not during the animation loop.
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(copy);
+    observer.observe(footnote);
+    return () => observer.disconnect();
+  }, [gl, invalidate, mobile, size.width, size.height]);
+  const mobilePosition = (
+    object: THREE.Object3D,
+    camera: THREE.Camera,
+    size: { width: number; height: number },
+  ) => {
+    point.setFromMatrixPosition(object.matrixWorld).project(camera);
+    const x = THREE.MathUtils.clamp(
+      ((point.x + 1) * size.width) / 2,
+      12,
+      size.width - (label.current?.offsetWidth ?? 150) - 12,
+    );
+    const top = Math.max(size.height * 0.24, copyBounds.current.top);
+    const bottom = Math.min(size.height - 12, copyBounds.current.bottom);
+    const gap = Math.min(36, (bottom - top - 28) / 3);
+    const y =
+      order === 3
+        ? Math.min(bottom - 28, Math.max(size.height * 0.7, top + gap * 3))
+        : top + order * gap;
+    point.set((x / size.width) * 2 - 1, 1 - (y / size.height) * 2, point.z).unproject(camera);
+    object.parent?.worldToLocal(point);
+    const start = leader.current?.geometry.attributes.instanceStart;
+    if (start instanceof THREE.InterleavedBufferAttribute) {
+      start.data.array.set([...anchor, point.x, point.y, point.z]);
+      start.data.needsUpdate = true;
+    }
+    return [x, y];
+  };
   return (
     <group>
-      <Line points={[anchor, end]} color="#a6adb3" lineWidth={1} transparent opacity={0.75} />
+      <Line
+        ref={leader}
+        points={[anchor, end]}
+        frustumCulled={!mobile}
+        color="#a6adb3"
+        lineWidth={1}
+        transparent
+        opacity={0.75}
+      />
       <mesh position={anchor}>
         <sphereGeometry args={[0.022, 8, 6]} />
         <meshBasicMaterial color="#f2f0ea" />
       </mesh>
-      <Html position={end} style={{ pointerEvents: "none" }}>
-        <span className="seat-part-label">{name}</span>
+      <Html
+        position={end}
+        calculatePosition={mobile ? mobilePosition : undefined}
+        style={{ pointerEvents: "none" }}
+      >
+        <span ref={label} className="seat-part-label">
+          {name}
+        </span>
       </Html>
     </group>
   );
@@ -179,7 +255,12 @@ export function BusSeat({
               </mesh>
             </AssetSlot>
             {annotations && (
-              <PartLabel name="Upholstery" anchor={[1.55, 3.28, 0.12]} end={[1.75, 4.18, 0.15]} />
+              <PartLabel
+                order={0}
+                name="Upholstery"
+                anchor={[1.55, 3.28, 0.12]}
+                end={[1.75, 4.18, 0.15]}
+              />
             )}
           </group>
           <group ref={comfort} name="seat-comfort">
@@ -203,6 +284,7 @@ export function BusSeat({
             </AssetSlot>
             {annotations && (
               <PartLabel
+                order={1}
                 name="Comfort layer"
                 anchor={[1.5, 2.95, -0.08]}
                 end={[1.82, 3.67, -0.1]}
@@ -217,6 +299,7 @@ export function BusSeat({
             </AssetSlot>
             {annotations && (
               <PartLabel
+                order={2}
                 name="Protective layer"
                 anchor={[1.5, 2.7, -0.3]}
                 end={[2.05, 3.2, -0.3]}
@@ -251,7 +334,12 @@ export function BusSeat({
               <SeatFrame selected={selected === "structure"} />
             </AssetSlot>
             {annotations && (
-              <PartLabel name="Seat structure" anchor={[1.18, 0.6, 1.21]} end={[2.2, 1.2, 1.21]} />
+              <PartLabel
+                order={3}
+                name="Seat structure"
+                anchor={[1.18, 0.6, 1.21]}
+                end={[2.2, 1.2, 1.21]}
+              />
             )}
           </group>
         </>
