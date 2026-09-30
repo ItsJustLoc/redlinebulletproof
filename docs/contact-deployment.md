@@ -191,7 +191,7 @@ No AWS resources or frontend production deployments were changed, and no email w
 
 - The implementation starts from GitHub `main` commit `ea5e84ff1501cf4a6eb067d78d1ee00f839c14ee`, on branch `codex/contact-aws-ses`.
 - Cloudflare Pages project `redlinebulletproof` serves the apex and www domains.
-- The existing production deployment is `59e2dc0d-3ff3-47c3-a34f-e6b9f9b7a287`, built from `07ed27c`; retain this as the pre-contact rollback target.
+- The pre-contact rollback deployment is `59e2dc0d-3ff3-47c3-a34f-e6b9f9b7a287`, built from `07ed27c`.
 - SES identity `redlinebulletproof.com` and DKIM both report success; `nationalgvinyl@gmail.com` is verified and `ngvcorp22@gmail.com` remains pending.
 - CloudFormation stack `redline-contact` is `UPDATE_COMPLETE` in `us-east-2`, with only `nationalgvinyl@gmail.com` allowed as a recipient.
 - The public contact API is `https://z9dtk4xln3.execute-api.us-east-2.amazonaws.com/contact`.
@@ -203,13 +203,21 @@ No AWS resources or frontend production deployments were changed, and no email w
 - 48 unit tests and 49 browser tests passed (7 existing platform-specific skips), alongside lint, typecheck, static export, Lambda bundle, SAM validation, and a dependency audit with zero production vulnerabilities.
 - The browser tests intercepted delivery locally; live AWS checks were run separately.
 - The exported browser JavaScript contains the actual API URL, with no fixed recipients, server-only SES configuration, or dummy API URL.
-- The static frontend was built with the real API URL for local testing, but no new Cloudflare production deployment has been published.
+- The static frontend was built with the real API URL and published to Cloudflare Pages production as `1a1ac7e6-b7d5-4bf2-8371-81b4f514e4d8`, from application commit `fec82aa`.
 - The latest single-recipient adjustment passed all 48 unit tests and all 14 contact browser tests, lint, typecheck, both builds, SAM validation, and an independent code review.
 - The pending `ngvcorp22@gmail.com` inbox is denied by the deployed IAM policy and does not block the approved single-recipient launch.
-- Live Lambda testing exposed an `AccessDeniedException` because the SES sandbox also checked the verified recipient identity resource.
+- Live Lambda testing exposed an `AccessDeniedException` because SES also checked the verified recipient identity resource.
 - Adding only that exact identity ARN resolved the failure; the same API submission then returned 200 with `ok: true` after SES acceptance.
 - IAM simulation now covers both the sender-domain and recipient identity resources, permits the configured inbox, and rejects the pending inbox and an unrelated address.
 - Safe error-code logging has a regression test that verifies private provider messages and unknown error names are never logged; all 49 unit tests pass.
+
+### Production verification (2026-09-30)
+
+The production site is `https://redlinebulletproof.com`, with the same release on the www domain.
+A real browser submission named `Redline Live Website Test` showed the pending state, then success and cleared fields after the deployed API acknowledged SES acceptance.
+No browser warnings or errors were captured during that live check.
+The user confirmed receipt of the earlier direct SES diagnostic; receipt and header inspection of the final website-submitted message are awaiting confirmation.
+These are distinct checks: the direct diagnostic did not exercise the Lambda role or the browser form.
 
 ### Adding the second inbox later
 
@@ -220,7 +228,6 @@ Restore the originally requested TO `ngvcorp22@gmail.com` and CC `nationalgvinyl
 Rebuild and deploy the Lambda stack, then confirm receipt and headers in both inboxes.
 This recipient-only change does not require a frontend rebuild because recipient addresses are kept server-side.
 
-After a successful release, record the actual stack output and Pages deployment ID here.
 Rollback the frontend through Cloudflare Pages to the pre-contact deployment if necessary, and leave the contact stack intact while diagnosing delivery.
 Avoid deleting a stack or SES identity merely to undo a frontend release.
 

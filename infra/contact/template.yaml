@@ -50,7 +50,7 @@ Resources:
               Action: ses:SendEmail
               Resource:
                 - !Sub "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}"
-                # SES sandbox sending also authorizes the verified recipient identity.
+                # Authorize both verified identities used by this delivery.
                 - !Sub "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/nationalgvinyl@gmail.com"
               Condition:
                 StringEquals:
