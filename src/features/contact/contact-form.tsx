@@ -1,15 +1,15 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowUpRight, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { company } from "@/data/company";
 import { contactSchema } from "./schema";
+import { contactApiUrl, ContactSubmitError, submitContact } from "./submit";
 import type { ContactErrors, ContactInput, ContactSubmitHandler } from "./types";
 
 const subscribeToHydration = () => () => {};
 
-export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
+export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSubmitHandler }) {
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -19,9 +19,17 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
   const [errors, setErrors] = useState<ContactErrors>({});
   const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  useEffect(() => {
+    const firstField = Object.keys(errors)[0];
+    if (!pending && firstField) {
+      form.current?.querySelector<HTMLElement>(`[name="${firstField}"]`)?.focus();
+    }
+  }, [errors, pending]);
+
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (submitting.current) return;
     setStatus("");
     const result = contactSchema.safeParse(Object.fromEntries(new FormData(event.currentTarget)));
     if (!result.success) {
@@ -29,26 +37,26 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
       for (const issue of result.error.issues)
         next[issue.path[0] as keyof ContactInput] ??= issue.message;
       setErrors(next);
-      form.current
-        ?.querySelector<HTMLElement>(`[name="${String(result.error.issues[0].path[0])}"]`)
-        ?.focus();
       return;
     }
     setErrors({});
-    if (!onSubmit) {
-      setStatus(
-        "Details checked locally. Nothing was sent — contact delivery is not connected yet.",
-      );
-      return;
-    }
+    submitting.current = true;
     setPending(true);
     try {
       await onSubmit(result.data);
-      setStatus("Your message has been received.");
+      setStatus("Thank you. Your message has been submitted to Redline.");
       form.current?.reset();
-    } catch {
-      setStatus("Your message could not be sent. Please try again.");
+    } catch (error) {
+      setStatus(
+        error instanceof ContactSubmitError
+          ? error.message
+          : "Your message could not be sent. Please try again.",
+      );
+      if (error instanceof ContactSubmitError) {
+        setErrors(error.fields);
+      }
     } finally {
+      submitting.current = false;
       setPending(false);
     }
   }
@@ -59,7 +67,19 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
       noValidate
       className="contact-form"
       aria-describedby="contact-notice"
+      aria-busy={pending}
     >
+      <div hidden aria-hidden="true">
+        <label htmlFor="contact-website">Leave this field blank</label>
+        <input
+          id="contact-website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          maxLength={200}
+        />
+      </div>
       <div className="form-grid">
         {(
           [
@@ -97,6 +117,7 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
               placeholder={field.placeholder}
               id={field.name}
               required
+              disabled={pending}
               aria-invalid={!!errors[field.name]}
               aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
               maxLength={field.name === "name" ? 120 : field.name === "phone" ? 40 : 254}
@@ -117,6 +138,7 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
             name="description"
             rows={4}
             required
+            disabled={pending}
             maxLength={5000}
             placeholder="Tell us about your application or what you would like to explore."
             aria-invalid={!!errors.description}
@@ -130,7 +152,11 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
         </div>
       </div>
       <div className="form-bottom">
-        <p id="contact-notice">{onSubmit ? "All fields are required." : company.contactStatus}</p>
+        <p id="contact-notice">
+          {contactApiUrl || onSubmit !== submitContact
+            ? "All fields are required."
+            : "Contact delivery is temporarily unavailable. Please try again later."}
+        </p>
         <Button type="submit" disabled={pending || !hydrated}>
           {pending ? "Sending" : "Contact Redline"}
           {pending ? (
@@ -140,11 +166,11 @@ export function ContactForm({ onSubmit }: { onSubmit?: ContactSubmitHandler }) {
           )}
         </Button>
       </div>
-      <p className="form-status" role="status">
+      <p className="form-status" role="status" aria-atomic="true">
         {status}
       </p>
       <noscript>
-        <p>This prototype needs JavaScript to check the form. Message delivery is not connected.</p>
+        <p>Please enable JavaScript to submit the contact form.</p>
       </noscript>
     </form>
   );

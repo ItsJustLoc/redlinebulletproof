@@ -1,7 +1,11 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
-test("title, navigation, and honest contact preview", async ({ page }) => {
+test("title, navigation, and honest contact status", async ({ page }) => {
+  const apiUrl = process.env.NEXT_PUBLIC_CONTACT_API_URL;
+  if (apiUrl) {
+    await page.route(apiUrl, (route) => route.fulfill({ json: { ok: true } }));
+  }
   const errors: string[] = [];
   const posts: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -24,8 +28,10 @@ test("title, navigation, and honest contact preview", async ({ page }) => {
     .getByLabel("Description")
     .fill("I would like to discuss a transportation seating application.");
   await page.getByRole("button", { name: "Contact Redline", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("Nothing was sent");
-  expect(posts).toEqual([]);
+  await expect(page.getByRole("status")).toContainText(
+    apiUrl ? "submitted to Redline" : "Nothing was sent",
+  );
+  expect(posts).toEqual(apiUrl ? [apiUrl] : []);
   expect(errors).toEqual([]);
 });
 
@@ -105,7 +111,10 @@ test("no JavaScript still exposes the story, product, and contact labels", async
   await expect(page.locator(".fallback-chapter")).toHaveCount(5);
   await expect(page.locator(".fallback-chapter").first()).toBeVisible();
   await expect(page.getByLabel("Phone Number")).toBeVisible();
-  await expect(page.locator("#contact-notice")).toContainText("Submissions are not connected");
+  await expect(page.locator(".contact-form noscript p")).toHaveText(
+    "Please enable JavaScript to submit the contact form.",
+  );
+  await expect(page.locator(".contact-form noscript p")).toBeVisible();
   await expect(page.getByRole("button", { name: "Contact Redline", exact: true })).toBeDisabled();
   await context.close();
 });

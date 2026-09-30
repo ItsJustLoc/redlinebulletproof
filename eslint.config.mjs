@@ -7,6 +7,8 @@ export default defineConfig([
   ...nextTypeScript,
   globalIgnores([
     "out/**",
+    "dist/**",
+    ".aws-sam/**",
     ".next/**",
     "review-artifacts/**",
     "next-env.d.ts",
