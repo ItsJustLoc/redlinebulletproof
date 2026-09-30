@@ -42,7 +42,8 @@ Install browser binaries once with `npx playwright install chromium webkit`.
 - React Three Postprocessing for restrained HDR bloom in the opening firing sequence.
 - Zod for contact validation, Vitest for logic, and Playwright / axe-core for browser checks.
 
-No CMS, authentication, database, API route, or server-dependent contact action is included.
+The frontend has no CMS, authentication, database, Next.js API route, or server action.
+Contact delivery runs separately through API Gateway, Lambda, and SES.
 Opening bloom is retained; subsequent material and product shots use the base lighting directly.
 
 ## Repository structure
@@ -77,6 +78,8 @@ src/
   lib/                   Shared UI class utility
 scripts/                 Local scene / poster capture tools
 tests/                  Unit tests and production browser checks
+backend/contact/        Lambda handler using the shared contact schema
+infra/contact/          AWS SAM template for API Gateway, Lambda, IAM, and logs
  docs/                   Art direction, asset provenance, verification notes
 ```
 
@@ -154,17 +157,17 @@ The required fields are `name`, `phone`, `email`, and `description`.
 `features/contact/types.ts` exports the parsed payload and asynchronous submission handler contract.
 `ContactForm` accepts an optional `onSubmit` adapter.
 
-The default prototype checks input locally and reports that nothing was sent.
+The form posts JSON to the public `NEXT_PUBLIC_CONTACT_API_URL`, baked into the export at build time.
+The Lambda currently sends plain-text mail TO `nationalgvinyl@gmail.com`, with the visitor email as Reply-To.
+The user approved launching with this verified inbox while `ngvcorp22@gmail.com` verification is pending.
+Recipients and AWS credentials are never supplied by the browser.
+The same Zod schema validates input in the browser and Lambda.
+A hidden honeypot, bounded request sizes, exact origin checks, and API Gateway throttling provide basic abuse protection.
 Without JavaScript, the submit button stays disabled so the browser cannot fall back to a native GET submission.
-It never issues a request, stores the payload, prints personal details to the console, or displays a fabricated delivery confirmation.
-The form notice is visible before submission.
-A successful validation does not erase the visitor’s entries.
-
-To connect a backend later, supply an adapter that sends JSON to `POST /contact` and rejects unsuccessful responses.
-Only resolve after the backend has actually accepted the request.
-The component already distinguishes pending, accepted, and failure states for a supplied adapter.
-Keep the backend outside this static Next.js build and configure the corresponding CloudFront behavior or verified API origin when it exists.
-Do not remove the prototype notice until delivery is implemented and verified.
+The button shows progress while sending; success requires an explicit server acknowledgement after SES returns a MessageId.
+Failures preserve entries, server validation focuses the rejected field, and no API URL produces an honest unavailable status.
+SES acceptance does not prove inbox receipt.
+See [contact deployment](docs/contact-deployment.md) for sender verification, IAM, deployment, test commands, and remaining live verification.
 
 ## Static deployment: Cloudflare Pages
 
@@ -178,7 +181,7 @@ Custom-domain activation requires GoDaddy to delegate to those nameservers and C
 Build and verify the export before uploading it:
 
 ```sh
-NEXT_PUBLIC_SITE_URL=https://redlinebulletproof.com npm run build
+NEXT_PUBLIC_SITE_URL=https://redlinebulletproof.com NEXT_PUBLIC_CONTACT_API_URL="$CONTACT_API_URL" npm run build
 npm run typecheck
 npm run lint
 npm test
@@ -196,7 +199,7 @@ Cloudflare requires a new Pages project to switch to its built-in Git integratio
 For later releases, roll back through the Pages deployment history to a previously successful production deployment.
 Before this migration, GoDaddy used `ns49.domaincontrol.com` and `ns50.domaincontrol.com`, with `A` records for `@` and `www` targeting `167.99.153.165` at a 600-second TTL.
 Those original GoDaddy records and the old server have been left intact; verify the old server is healthy before using it as a migration rollback.
-The contact form remains an explicitly labeled, non-sending prototype.
+Set `CONTACT_API_URL` to the deployed contact stack output before building; missing configuration leaves contact delivery unavailable.
 
 References: [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/) and [Pages custom domains](https://developers.cloudflare.com/pages/configuration/custom-domains/).
 

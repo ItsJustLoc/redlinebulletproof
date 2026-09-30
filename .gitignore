@@ -8,5 +8,8 @@ playwright-report/
 test-results/
 .DS_Store
 coverage/
+dist/
+.aws-sam/
+samconfig.toml
 
 review-artifacts/

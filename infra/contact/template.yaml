@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Redline contact API with fixed recipients and SES delivery
+
+Parameters:
+  SesFromEmail:
+    Type: String
+    Description: Plain verified sender email address in this AWS region
+    AllowedPattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+  SesIdentity:
+    Type: String
+    Description: Verified SES domain or email identity that owns SesFromEmail
+    AllowedPattern: '^[a-zA-Z0-9@._+\-]+$'
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Description: Exact HTTPS website origins, without paths or trailing slashes
+    Default: https://redlinebulletproof.com,https://www.redlinebulletproof.com,https://redlinebulletproof.pages.dev
+    AllowedPattern: "^https://[a-zA-Z0-9.-]+(:[0-9]+)?$"
+
+Resources:
+  ContactApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: "$default"
+      CorsConfiguration:
+        AllowOrigins: !Ref AllowedOrigins
+        AllowMethods: [POST, OPTIONS]
+        AllowHeaders: [Content-Type, Accept]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 5
+        ThrottlingRateLimit: 1
+  ContactFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../dist/contact/
+      Handler: index.handler
+      Runtime: nodejs24.x
+      Architectures: [arm64]
+      MemorySize: 256
+      Timeout: 12
+      Environment:
+        Variables:
+          SES_FROM_EMAIL: !Ref SesFromEmail
+          ALLOWED_ORIGINS: !Join [",", !Ref AllowedOrigins]
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: ses:SendEmail
+              Resource:
+                - !Sub "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/${SesIdentity}"
+                # Authorize both verified identities used by this delivery.
+                - !Sub "arn:${AWS::Partition}:ses:${AWS::Region}:${AWS::AccountId}:identity/nationalgvinyl@gmail.com"
+              Condition:
+                StringEquals:
+                  ses:FromAddress: !Ref SesFromEmail
+                ForAllValues:StringEquals:
+                  ses:Recipients:
+                    - nationalgvinyl@gmail.com
+      Events:
+        Contact:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref ContactApi
+            Path: /contact
+            Method: POST
+            PayloadFormatVersion: "2.0"
+  ContactLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${ContactFunction}"
+      RetentionInDays: 14
+
+Outputs:
+  ContactApiUrl:
+    Description: Set NEXT_PUBLIC_CONTACT_API_URL to this before building the static site
+    Value: !Sub "https://${ContactApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/contact"
