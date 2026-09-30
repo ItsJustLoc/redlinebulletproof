@@ -405,6 +405,7 @@ img {
   color: var(--color-text-muted);
 }
 .form-field input,
+.form-field select,
 .form-field textarea {
   width: 100%;
   background: transparent;
@@ -416,6 +417,27 @@ img {
   color: var(--color-text);
   resize: vertical;
 }
+.form-select {
+  position: relative;
+}
+.form-select select {
+  appearance: none;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+.form-select select:invalid {
+  color: var(--color-text-muted);
+}
+.form-select option {
+  color: var(--color-text);
+  background: var(--color-background);
+}
+.form-select svg {
+  position: absolute;
+  right: 0;
+  top: 1rem;
+  pointer-events: none;
+}
 .form-field input::placeholder,
 .form-field textarea::placeholder {
   color: var(--color-text-muted);
@@ -423,6 +445,7 @@ img {
   font-size: 0.8rem;
 }
 .field-email,
+.field-inquiry,
 .field-description {
   grid-column: 1/-1;
 }

@@ -8,7 +8,7 @@ No Next.js server route, SMTP password, client API key, database, or mailto link
 
 The reference is `NGV_HLD_v1.1.md` (draft, 2026-08-31), which describes the broader `ngv-inc.com` platform.
 This Redline integration follows its API Gateway → Lambda → SES pattern and `us-east-2` region.
-The current Redline scope retains the four existing form fields.
+The current Redline scope retains name, email, phone, and description, and adds an inquiry-type selection.
 The user approved launching with only the verified `nationalgvinyl@gmail.com` inbox and adding `ngvcorp22@gmail.com` after its verification.
 It does not add the HLD's separate district fields, submitter acknowledgement, or DynamoDB retention.
 Redline remains on its existing Cloudflare Pages deployment; an S3/CloudFront migration is a separate change.
@@ -25,7 +25,7 @@ The HLD proposes `noreply@ngv-inc.com`; Redline uses the user-approved `noreply@
 - From: `noreply@redlinebulletproof.com`, supplied as `SesFromEmail` during deployment.
 - Reply-To: the validated visitor email.
 - Subject: `Redline Bulletproof website inquiry`.
-- Body: plain text containing name, email, phone, and description.
+- Body: plain text containing name, email, phone, inquiry type, and an optional description.
 
 Recipients are fixed in `backend/contact/handler.ts` and restricted again by IAM.
 Unknown payload properties cannot override the recipients, sender, subject, or headers.
@@ -35,6 +35,19 @@ The visitor then replies to that business Gmail address, so the conversation can
 No automatic confirmation is sent to the visitor, and no receiving mailbox was created for the notification sender.
 Plain-text mail keeps submitted markup inert.
 The shared Zod schema trims fields, bounds lengths, validates email and phone, and rejects unsupported control characters while preserving message newlines.
+Name, email, phone, and an inquiry choice are required in the current form.
+The four choices are Product information, Request a quote, School-bus seating, and Other; arbitrary inquiry values are rejected by the server.
+An empty, whitespace-only, or omitted description is accepted and appears as `No description provided.` in the notification.
+Descriptions that are supplied retain the 5,000-character limit and control-character checks.
+Phone validation checks 7–15 digits, common separators, at most one balanced pair of parentheses, and an optional leading `+`.
+This checks formatting, not number assignment, country-specific validity, or email/phone ownership.
+The browser validates fields on blur and revalidates reported errors while editing, without interrupting focus.
+Submit-time validation still focuses the first rejected field.
+
+Deploy the Lambda before the updated frontend.
+The backend defaults an omitted inquiry to Other for cached clients from before this field existed, while rejecting an explicitly empty or unrecognized selection.
+The frontend always sends and requires a selection, and both releases accept the existing description payload.
+This allows the previous frontend to remain usable during rollout or frontend rollback.
 Request bodies are capped at 32 KiB, including decoded API Gateway base64 requests.
 Only JSON POSTs from configured exact origins are accepted.
 
@@ -235,7 +248,7 @@ Avoid deleting a stack or SES identity merely to undo a frontend release.
 
 After AWS and frontend deployment, submit one clearly labeled test inquiry through the real published form.
 Verify the browser preflight and POST succeed from the actual site origin and that the form reports success only after the POST.
-Confirm receipt in `nationalgvinyl@gmail.com` and inspect TO, the absence of CC, Reply-To, name, phone, email, and description.
+Confirm receipt in `nationalgvinyl@gmail.com` and inspect TO, the absence of CC, Reply-To, name, phone, email, inquiry type, and the optional description.
 Confirm replying addresses the visitor, and check spam folders if delivery is delayed.
 Monitor Lambda errors and SES delivery/bounce/complaint information; a MessageId alone is not inbox proof.
 Do not mark delivery complete until these checks pass.

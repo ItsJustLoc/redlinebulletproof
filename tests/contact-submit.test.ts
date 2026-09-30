@@ -4,6 +4,7 @@ const input = {
   name: "Example Person",
   email: "person@example.com",
   phone: "555-010-1234",
+  inquiry: "Product information" as const,
   description: "Please discuss a seating application.",
   website: "",
 };
@@ -62,7 +63,12 @@ describe("contact submission adapter", () => {
       vi.fn().mockResolvedValue(
         new Response(
           JSON.stringify({
-            fields: { email: "Please check your email.", phone: [], unknown: "ignore me" },
+            fields: {
+              email: "Please check your email.",
+              inquiry: "Please choose an inquiry type.",
+              phone: [],
+              unknown: "ignore me",
+            },
           }),
           { status: 400 },
         ),
@@ -70,7 +76,7 @@ describe("contact submission adapter", () => {
     );
     const { submitContact } = await adapter();
     await expect(submitContact(input)).rejects.toMatchObject({
-      fields: { email: "Please check your email." },
+      fields: { email: "Please check your email.", inquiry: "Please choose an inquiry type." },
     });
   });
 

@@ -24,6 +24,7 @@ test("title, navigation, and honest contact status", async ({ page }) => {
   await page.getByLabel("Name", { exact: false }).first().fill("Example Person");
   await page.getByLabel("Phone Number").fill("555-010-1234");
   await page.getByLabel("Email Address").fill("person@example.com");
+  await page.getByLabel("Inquiry type").selectOption("Product information");
   await page
     .getByLabel("Description")
     .fill("I would like to discuss a transportation seating application.");

@@ -32,7 +32,7 @@ export const submitContact: ContactSubmitHandler = async (input) => {
     if (!response.ok || body?.ok !== true) {
       const fields: ContactErrors = {};
       if (response.status === 400) {
-        for (const field of ["name", "email", "phone", "description"] as const) {
+        for (const field of ["name", "email", "phone", "inquiry", "description"] as const) {
           if (typeof body?.fields?.[field] === "string") fields[field] = body.fields[field];
         }
       }
