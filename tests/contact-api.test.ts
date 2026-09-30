@@ -6,6 +6,7 @@ const valid = {
   name: " Example Person ",
   email: " person@example.com ",
   phone: "+1 (555) 010-1234",
+  inquiry: "School-bus seating",
   description: "Please discuss seating.\n<script>alert('test')</script>",
   website: "",
 };
@@ -43,7 +44,7 @@ describe("contact API", () => {
           Subject: { Data: "Redline Bulletproof website inquiry", Charset: "UTF-8" },
           Body: {
             Text: {
-              Data: `Name: Example Person\nEmail: person@example.com\nPhone: ${valid.phone}\n\nMessage:\n${valid.description}`,
+              Data: `Name: Example Person\nEmail: person@example.com\nPhone: ${valid.phone}\nInquiry: School-bus seating\n\nMessage:\n${valid.description}`,
               Charset: "UTF-8",
             },
           },
@@ -52,10 +53,34 @@ describe("contact API", () => {
     });
   });
 
+  it.each([undefined, "", "  ", "Hi"])(
+    "sends a selected inquiry with optional description %j",
+    async (description) => {
+      const { handle, send } = setup();
+      expect((await handle(event({ ...valid, description }))).statusCode).toBe(200);
+      expect(send.mock.calls[0][0].Content.Simple.Body.Text.Data).toContain(
+        `Inquiry: School-bus seating\n\nMessage:\n${description?.trim() || "No description provided."}`,
+      );
+    },
+  );
+
+  it("accepts cached older forms without an inquiry as Other", async () => {
+    const { handle, send } = setup();
+    expect((await handle(event({ ...valid, inquiry: undefined }))).statusCode).toBe(200);
+    expect(send.mock.calls[0][0].Content.Simple.Body.Text.Data).toContain("Inquiry: Other");
+  });
+
   it.each([
     { name: "" },
     { phone: "no number" },
     { phone: "555\n0101234" },
+    { phone: "++1 555 010 1234" },
+    { phone: "1234567890123456" },
+    { email: "person@example" },
+    { inquiry: "" },
+    { inquiry: "Forged option" },
+    { inquiry: ["Other"] },
+    { description: null },
     { email: "person@example.com\r\nBcc: attacker@example.com" },
     { name: "Person\nFake header" },
     { description: "x".repeat(5001) },
@@ -155,14 +180,18 @@ describe("contact API", () => {
     const { handle, send } = setup();
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      send.mockRejectedValue(Object.assign(new Error("private provider details"), {
-        name: "AccessDeniedException",
-      }));
+      send.mockRejectedValue(
+        Object.assign(new Error("private provider details"), {
+          name: "AccessDeniedException",
+        }),
+      );
       expect((await handle(event())).statusCode).toBe(502);
       expect(log).toHaveBeenLastCalledWith("contact_delivery_failed", "AccessDeniedException");
-      send.mockRejectedValue(Object.assign(new Error("private provider details"), {
-        name: "private unknown error",
-      }));
+      send.mockRejectedValue(
+        Object.assign(new Error("private provider details"), {
+          name: "private unknown error",
+        }),
+      );
       expect((await handle(event())).statusCode).toBe(502);
       expect(log).toHaveBeenLastCalledWith("contact_delivery_failed", "unknown");
       expect(JSON.stringify(log.mock.calls)).not.toContain("private");

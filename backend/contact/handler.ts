@@ -13,6 +13,10 @@ type Config = { fromEmail: string; allowedOrigins: string[] };
 type SendEmail = (input: SendEmailCommandInput) => Promise<{ MessageId?: string }>;
 
 const maxBodyBytes = 32 * 1024;
+// Cached forms from before inquiry choices were added can still submit.
+const submissionSchema = contactSchema.extend({
+  inquiry: contactSchema.shape.inquiry.default("Other"),
+});
 const reply = (statusCode: number, body: object) => ({
   statusCode,
   headers: {
@@ -54,7 +58,7 @@ export function createContactHandler(sendEmail: SendEmail, config: Config) {
     } catch {
       return reply(400, { error: "Invalid JSON." });
     }
-    const parsed = contactSchema.safeParse(input);
+    const parsed = submissionSchema.safeParse(input);
     if (!parsed.success) {
       const fields: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -67,7 +71,7 @@ export function createContactHandler(sendEmail: SendEmail, config: Config) {
     if (!z.email().safeParse(config.fromEmail).success) {
       return reply(503, { error: "Contact delivery is temporarily unavailable." });
     }
-    const { name, email, phone, description } = parsed.data;
+    const { name, email, phone, inquiry, description } = parsed.data;
     try {
       const sent = await sendEmail({
         FromEmailAddress: config.fromEmail,
@@ -80,7 +84,7 @@ export function createContactHandler(sendEmail: SendEmail, config: Config) {
             Subject: { Data: "Redline Bulletproof website inquiry", Charset: "UTF-8" },
             Body: {
               Text: {
-                Data: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\n\nMessage:\n${description}`,
+                Data: `Name: ${name}\nEmail: ${email}\nPhone: ${phone}\nInquiry: ${inquiry}\n\nMessage:\n${description || "No description provided."}`,
                 Charset: "UTF-8",
               },
             },

@@ -152,7 +152,9 @@ All exported dimensions describe website assets, never product specifications.
 
 ## Contact integration
 
-The required fields are `name`, `phone`, `email`, and `description`.
+The required fields are `name`, `phone`, `email`, and `inquiry`.
+Inquiry choices are Product information, Request a quote, School-bus seating, and Other.
+`description` is optional, with a maximum of 5,000 characters.
 `features/contact/schema.ts` owns typed validation.
 `features/contact/types.ts` exports the parsed payload and asynchronous submission handler contract.
 `ContactForm` accepts an optional `onSubmit` adapter.
@@ -162,6 +164,9 @@ The Lambda currently sends plain-text mail TO `nationalgvinyl@gmail.com`, with t
 The user approved launching with this verified inbox while `ngvcorp22@gmail.com` verification is pending.
 Recipients and AWS credentials are never supplied by the browser.
 The same Zod schema validates input in the browser and Lambda.
+Email and phone errors appear when leaving a field and clear as the entry is corrected, without moving focus.
+Phone format validation accepts 7–15 digits with common separators, one pair of parentheses, and an optional leading country-code `+`; it does not verify ownership or reachability.
+The backend accepts older cached forms without `inquiry` as Other.
 A hidden honeypot, bounded request sizes, exact origin checks, and API Gateway throttling provide basic abuse protection.
 Without JavaScript, the submit button stays disabled so the browser cannot fall back to a native GET submission.
 The button shows progress while sending; success requires an explicit server acknowledgement after SES returns a MessageId.

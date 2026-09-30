@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { ArrowUpRight, LoaderCircle } from "lucide-react";
+import { ArrowUpRight, ChevronDown, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { contactSchema } from "./schema";
+import { contactSchema, inquiryOptions } from "./schema";
 import { contactApiUrl, ContactSubmitError, submitContact } from "./submit";
 import type { ContactErrors, ContactInput, ContactSubmitHandler } from "./types";
 
@@ -20,12 +20,24 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
   const [status, setStatus] = useState("");
   const [pending, setPending] = useState(false);
   const submitting = useRef(false);
+  const focusErrors = useRef(false);
   useEffect(() => {
     const firstField = Object.keys(errors)[0];
-    if (!pending && firstField) {
-      form.current?.querySelector<HTMLElement>(`[name="${firstField}"]`)?.focus();
+    if (!pending && focusErrors.current) {
+      focusErrors.current = false;
+      if (firstField) form.current?.querySelector<HTMLElement>(`[name="${firstField}"]`)?.focus();
     }
   }, [errors, pending]);
+
+  function validateField(field: keyof ContactInput, value: string) {
+    const result = contactSchema.shape[field].safeParse(value);
+    setErrors((previous) => {
+      const next = { ...previous };
+      if (result.success) delete next[field];
+      else next[field] = result.error.issues[0].message;
+      return next;
+    });
+  }
 
   async function submit(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,7 +48,9 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
       const next: ContactErrors = {};
       for (const issue of result.error.issues)
         next[issue.path[0] as keyof ContactInput] ??= issue.message;
+      focusErrors.current = true;
       setErrors(next);
+      setStatus("Please check the highlighted fields.");
       return;
     }
     setErrors({});
@@ -53,6 +67,7 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
           : "Your message could not be sent. Please try again.",
       );
       if (error instanceof ContactSubmitError) {
+        focusErrors.current = true;
         setErrors(error.fields);
       }
     } finally {
@@ -118,6 +133,10 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
               id={field.name}
               required
               disabled={pending}
+              onBlur={(event) => validateField(field.name, event.currentTarget.value)}
+              onChange={(event) => {
+                if (errors[field.name]) validateField(field.name, event.currentTarget.value);
+              }}
               aria-invalid={!!errors[field.name]}
               aria-describedby={errors[field.name] ? `${field.name}-error` : undefined}
               maxLength={field.name === "name" ? 120 : field.name === "phone" ? 40 : 254}
@@ -129,16 +148,52 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
             )}
           </div>
         ))}
+        <div className="form-field field-inquiry">
+          <label htmlFor="inquiry">
+            Inquiry type <span aria-hidden="true">*</span>
+          </label>
+          <div className="form-select">
+            <select
+              id="inquiry"
+              name="inquiry"
+              defaultValue=""
+              required
+              disabled={pending}
+              onBlur={(event) => validateField("inquiry", event.currentTarget.value)}
+              onChange={(event) => validateField("inquiry", event.currentTarget.value)}
+              aria-invalid={!!errors.inquiry}
+              aria-describedby={errors.inquiry ? "inquiry-error" : undefined}
+            >
+              <option value="" disabled>
+                Select an inquiry type
+              </option>
+              {inquiryOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={18} aria-hidden="true" />
+          </div>
+          {errors.inquiry && (
+            <p className="field-error" id="inquiry-error">
+              {errors.inquiry}
+            </p>
+          )}
+        </div>
         <div className="form-field field-description">
           <label htmlFor="description">
-            Description <span aria-hidden="true">*</span>
+            Description <span>(optional)</span>
           </label>
           <textarea
             id="description"
             name="description"
             rows={4}
-            required
             disabled={pending}
+            onBlur={(event) => validateField("description", event.currentTarget.value)}
+            onChange={(event) => {
+              if (errors.description) validateField("description", event.currentTarget.value);
+            }}
             maxLength={5000}
             placeholder="Tell us about your application or what you would like to explore."
             aria-invalid={!!errors.description}
@@ -154,7 +209,7 @@ export function ContactForm({ onSubmit = submitContact }: { onSubmit?: ContactSu
       <div className="form-bottom">
         <p id="contact-notice">
           {contactApiUrl || onSubmit !== submitContact
-            ? "All fields are required."
+            ? "Fields marked * are required. Description is optional."
             : "Contact delivery is temporarily unavailable. Please try again later."}
         </p>
         <Button type="submit" disabled={pending || !hydrated}>
