@@ -232,6 +232,20 @@ No browser warnings or errors were captured during that live check.
 The user confirmed receipt of the earlier direct SES diagnostic; receipt and header inspection of the final website-submitted message are awaiting confirmation.
 These are distinct checks: the direct diagnostic did not exercise the Lambda role or the browser form.
 
+### Inquiry choices and format validation release (2026-09-30)
+
+- Application commit `5222e67` adds the four inquiry choices, optional description, and inline email/phone format checks.
+- All 95 unit tests and 53 browser tests passed, with 7 existing platform-specific skips.
+- Lint, typecheck, static export, Lambda bundle, SAM validation, and an independent review passed.
+- After keeping the native select at 16px for mobile use, the final static export passed 25 targeted contact/accessibility browser checks, with 1 existing platform skip.
+- The Lambda stack reached `UPDATE_COMPLETE` before the frontend release, with no IAM, recipient, or origin changes.
+- Live API checks returned 400 for invalid email, phone, and inquiry values; a blank-description honeypot check returned 200 without sending mail.
+- Cloudflare production deployment `6627d22a-1461-449e-aa1b-dadcba827e6c` serves the export from application commit `5222e67`.
+- Both apex and www URLs expose the updated form.
+- A real browser submission named `Redline Optional Description Test`, with School-bus seating selected and the description empty, showed Sending followed by success and cleared fields.
+- That success confirms SES acceptance; inbox receipt and header inspection of this new test have not been independently confirmed.
+- No browser warnings or errors were captured during the live check.
+
 ### Adding the second inbox later
 
 The subsequent launch uses only `nationalgvinyl@gmail.com`, as explicitly approved by the user.
@@ -241,7 +255,7 @@ Restore the originally requested TO `ngvcorp22@gmail.com` and CC `nationalgvinyl
 Rebuild and deploy the Lambda stack, then confirm receipt and headers in both inboxes.
 This recipient-only change does not require a frontend rebuild because recipient addresses are kept server-side.
 
-Rollback the frontend through Cloudflare Pages to the pre-contact deployment if necessary, and leave the contact stack intact while diagnosing delivery.
+To undo the inquiry-form update, roll back Cloudflare Pages to `1a1ac7e6-b7d5-4bf2-8371-81b4f514e4d8` and leave the compatible contact backend intact.
 Avoid deleting a stack or SES identity merely to undo a frontend release.
 
 ## Required live acceptance checks
