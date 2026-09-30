@@ -150,4 +150,24 @@ describe("contact API", () => {
     expect((await handle(event())).statusCode).toBe(503);
     expect(send).not.toHaveBeenCalled();
   });
+
+  it("logs an allowlisted delivery error code without provider messages or unknown names", async () => {
+    const { handle, send } = setup();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      send.mockRejectedValue(Object.assign(new Error("private provider details"), {
+        name: "AccessDeniedException",
+      }));
+      expect((await handle(event())).statusCode).toBe(502);
+      expect(log).toHaveBeenLastCalledWith("contact_delivery_failed", "AccessDeniedException");
+      send.mockRejectedValue(Object.assign(new Error("private provider details"), {
+        name: "private unknown error",
+      }));
+      expect((await handle(event())).statusCode).toBe(502);
+      expect(log).toHaveBeenLastCalledWith("contact_delivery_failed", "unknown");
+      expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+    } finally {
+      log.mockRestore();
+    }
+  });
 });

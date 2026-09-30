@@ -128,9 +128,9 @@ The deployment principal needs CloudFormation stack/change-set permissions, arti
 Use a scoped deployment role or CloudFormation service role appropriate to the account; these provisioning permissions do not belong on Lambda itself.
 SES identity verification and production-access requests require separate SES administration permissions.
 
-The Lambda role has `ses:SendEmail` only for the selected regional identity, with conditions limiting From and recipients, plus the SAM-generated basic CloudWatch logging permissions.
+The Lambda role has `ses:SendEmail` only for the selected regional sender identity and the exact verified recipient identity, with conditions limiting From and recipients, plus the SAM-generated basic CloudWatch logging permissions.
 There are no SMTP or API credentials to provision in browser JavaScript.
-The application logs only the fixed event `contact_delivery_failed`, not submissions or raw provider errors.
+The application logs the fixed event `contact_delivery_failed` and an allowlisted error code, not submissions, arbitrary error names, or raw provider messages.
 CloudWatch logs have a 14-day retention period.
 The backend does not persist form data; submitted personal details remain in the receiving mailboxes according to the business's mailbox retention/access policies.
 
@@ -206,13 +206,17 @@ No AWS resources or frontend production deployments were changed, and no email w
 - The static frontend was built with the real API URL for local testing, but no new Cloudflare production deployment has been published.
 - The latest single-recipient adjustment passed all 48 unit tests and all 14 contact browser tests, lint, typecheck, both builds, SAM validation, and an independent code review.
 - The pending `ngvcorp22@gmail.com` inbox is denied by the deployed IAM policy and does not block the approved single-recipient launch.
+- Live Lambda testing exposed an `AccessDeniedException` because the SES sandbox also checked the verified recipient identity resource.
+- Adding only that exact identity ARN resolved the failure; the same API submission then returned 200 with `ok: true` after SES acceptance.
+- IAM simulation now covers both the sender-domain and recipient identity resources, permits the configured inbox, and rejects the pending inbox and an unrelated address.
+- Safe error-code logging has a regression test that verifies private provider messages and unknown error names are never logged; all 49 unit tests pass.
 
 ### Adding the second inbox later
 
 The subsequent launch uses only `nationalgvinyl@gmail.com`, as explicitly approved by the user.
 Do not automatically add the pending address when SES marks it verified.
 When that follow-up change is requested, first confirm `ngvcorp22@gmail.com` verification with `list-email-identities`.
-Restore the originally requested TO `ngvcorp22@gmail.com` and CC `nationalgvinyl@gmail.com` in the handler, add the address back to the IAM recipient allowlist, and update both recipient assertions in the unit/browser tests.
+Restore the originally requested TO `ngvcorp22@gmail.com` and CC `nationalgvinyl@gmail.com` in the handler, add the address and its verified identity ARN back to the IAM policy, and update both recipient assertions in the unit/browser tests.
 Rebuild and deploy the Lambda stack, then confirm receipt and headers in both inboxes.
 This recipient-only change does not require a frontend rebuild because recipient addresses are kept server-side.
 

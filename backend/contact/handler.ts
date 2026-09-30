@@ -89,9 +89,15 @@ export function createContactHandler(sendEmail: SendEmail, config: Config) {
       });
       if (!sent.MessageId) throw new Error("SES did not acknowledge the message");
       return reply(200, { ok: true });
-    } catch {
-      // Never log the payload, recipient details, or raw provider exception.
-      console.error("contact_delivery_failed");
+    } catch (error) {
+      // Only fixed diagnostic codes are logged, never messages or submitted data.
+      const knownCodes = [
+        "AccessDeniedException", "MessageRejected", "TooManyRequestsException",
+        "AccountSuspendedException", "SendingPausedException", "MailFromDomainNotVerifiedException",
+        "NotFoundException", "CredentialsProviderError", "TimeoutError", "TypeError", "ReferenceError",
+      ];
+      const code = error instanceof Error && knownCodes.includes(error.name) ? error.name : "unknown";
+      console.error("contact_delivery_failed", code);
       return reply(502, { error: "Your message could not be sent. Please try again later." });
     }
   };
