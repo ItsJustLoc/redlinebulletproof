@@ -27,7 +27,7 @@ const setup = () => {
 };
 
 describe("contact API", () => {
-  it("sends plain text with the fixed To/CC and the visitor as Reply-To", async () => {
+  it("sends only to the verified business inbox with the visitor as Reply-To", async () => {
     const { handle, send } = setup();
     const result = await handle(event({ ...valid, to: "attacker@example.com" }));
     expect(result.statusCode).toBe(200);
@@ -35,8 +35,7 @@ describe("contact API", () => {
     expect(send).toHaveBeenCalledExactlyOnceWith({
       FromEmailAddress: "contact@redlinebulletproof.com",
       Destination: {
-        ToAddresses: ["ngvcorp22@gmail.com"],
-        CcAddresses: ["nationalgvinyl@gmail.com"],
+        ToAddresses: ["nationalgvinyl@gmail.com"],
       },
       ReplyToAddresses: ["person@example.com"],
       Content: {

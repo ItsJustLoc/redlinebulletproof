@@ -8,7 +8,8 @@ No Next.js server route, SMTP password, client API key, database, or mailto link
 
 The reference is `NGV_HLD_v1.1.md` (draft, 2026-08-31), which describes the broader `ngv-inc.com` platform.
 This Redline integration follows its API Gateway → Lambda → SES pattern and `us-east-2` region.
-The current Redline scope retains the four existing form fields and the requested TO/CC addresses.
+The current Redline scope retains the four existing form fields.
+The user approved launching with only the verified `nationalgvinyl@gmail.com` inbox and adding `ngvcorp22@gmail.com` after its verification.
 It does not add the HLD's separate district fields, submitter acknowledgement, or DynamoDB retention.
 Redline remains on its existing Cloudflare Pages deployment; an S3/CloudFront migration is a separate change.
 
@@ -19,8 +20,8 @@ The HLD proposes `noreply@ngv-inc.com`; Redline uses the user-approved `noreply@
 
 ## Email and validation behavior
 
-- TO: `ngvcorp22@gmail.com`.
-- CC: `nationalgvinyl@gmail.com`.
+- TO: `nationalgvinyl@gmail.com`.
+- CC: none during the initial launch.
 - From: `noreply@redlinebulletproof.com`, supplied as `SesFromEmail` during deployment.
 - Reply-To: the validated visitor email.
 - Subject: `Redline Bulletproof website inquiry`.
@@ -29,7 +30,7 @@ The HLD proposes `noreply@ngv-inc.com`; Redline uses the user-approved `noreply@
 Recipients are fixed in `backend/contact/handler.ts` and restricted again by IAM.
 Unknown payload properties cannot override the recipients, sender, subject, or headers.
 The visitor address is never used as From.
-Replying to the notification in either business Gmail account addresses the visitor.
+Replying to the notification in the business Gmail account addresses the visitor.
 The visitor then replies to that business Gmail address, so the conversation can continue normally.
 No automatic confirmation is sent to the visitor, and no receiving mailbox was created for the notification sender.
 Plain-text mail keeps submitted markup inert.
@@ -49,7 +50,7 @@ The client aborts after 15 seconds and does not automatically retry.
 A network failure can leave delivery uncertain; a manual retry can therefore create a duplicate email.
 Fields clear only after a successful API response with `ok: true`.
 For normal submissions, Lambda returns that response only after SES returns a MessageId.
-This confirms provider acceptance, not final delivery to either inbox.
+This confirms provider acceptance, not final delivery to the inbox.
 
 ## Configuration
 
@@ -75,7 +76,7 @@ Missing API configuration displays an unavailable notice and sends nothing.
 2. Verify a sender domain or email identity in that region and select the actual From address.
    For a domain identity, publish the SES DKIM DNS records and follow its sender-authentication setup.
 3. Check whether SES is in the sandbox and whether sending is enabled.
-   In the sandbox, **both** recipient mailboxes must also be verified in that region; verification of only the sender is insufficient.
+   In the sandbox, every active recipient mailbox must also be verified in that region; verification of only the sender is insufficient.
    Request production access before relying on delivery to unverified recipients.
    The visitor email is only Reply-To and does not need SES verification.
 4. Deploy the backend in the same region as the verified identity.
@@ -83,9 +84,9 @@ Missing API configuration displays an unavailable notice and sends nothing.
 The local profile `ngv` is configured for `us-east-2` in AWS account `527595306192`.
 SSO access was refreshed and account configuration was inspected on 2026-09-30.
 SES sending is enabled, but the account remains in the sandbox with a quota of 200 recipient deliveries per 24 hours and 1 per second.
-Each accepted contact message has two recipients and consumes two recipient deliveries.
+Each accepted contact message currently has one recipient and consumes one recipient delivery.
 Verification emails were requested for both destination mailboxes.
-`nationalgvinyl@gmail.com` is verified; `ngvcorp22@gmail.com` remains pending at the latest account check.
+`nationalgvinyl@gmail.com` is verified; `ngvcorp22@gmail.com` remains pending and is excluded from both the handler and IAM permissions.
 The sender domain `redlinebulletproof.com` is verified with SES Easy DKIM using 2048-bit keys.
 Its three CNAME records are published as DNS-only records in the existing Cloudflare zone.
 The existing DMARC policy and website records remain unchanged.
@@ -186,28 +187,34 @@ Local tests do not exercise AWS IAM, API Gateway preflight behavior, SES account
 
 No AWS resources or frontend production deployments were changed, and no email was sent during those local implementation checks.
 
-### Configuration checkpoint (2026-09-30)
+### Backend configuration (2026-09-30)
 
 - The implementation starts from GitHub `main` commit `ea5e84ff1501cf4a6eb067d78d1ee00f839c14ee`, on branch `codex/contact-aws-ses`.
 - Cloudflare Pages project `redlinebulletproof` serves the apex and www domains.
 - The existing production deployment is `59e2dc0d-3ff3-47c3-a34f-e6b9f9b7a287`, built from `07ed27c`; retain this as the pre-contact rollback target.
 - SES identity `redlinebulletproof.com` and DKIM both report success; `nationalgvinyl@gmail.com` is verified and `ngvcorp22@gmail.com` remains pending.
-- CloudFormation stack `redline-contact` is `CREATE_COMPLETE` in `us-east-2`.
+- CloudFormation stack `redline-contact` is `UPDATE_COMPLETE` in `us-east-2`, with only `nationalgvinyl@gmail.com` allowed as a recipient.
 - The public contact API is `https://z9dtk4xln3.execute-api.us-east-2.amazonaws.com/contact`.
 - Lambda is `redline-contact-ContactFunction-etSDjRPx73nn`, with a 14-day log group and the fixed sender/recipient permissions in the template.
 - SAM created its managed artifact bucket in the same region; there are no static AWS credentials in the frontend or Lambda configuration.
 - Live API checks passed: allowed-origin preflight (204), invalid input (400), unapproved origin (403 with no CORS allowance), and a honeypot submission (200 without sending).
 - IAM policy simulation permits the intended sender/recipients and denies a different sender or recipient.
-- A clearly labeled normal test submission returned 502 with the public delivery error while the TO recipient remained unverified; no successful delivery has been claimed.
+- The earlier two-recipient configuration returned an honest 502 while `ngvcorp22@gmail.com` remained unverified; the user subsequently approved launching with just the verified inbox.
 - 48 unit tests and 49 browser tests passed (7 existing platform-specific skips), alongside lint, typecheck, static export, Lambda bundle, SAM validation, and a dependency audit with zero production vulnerabilities.
 - The browser tests intercepted delivery locally; live AWS checks were run separately.
 - The exported browser JavaScript contains the actual API URL, with no fixed recipients, server-only SES configuration, or dummy API URL.
 - The static frontend was built with the real API URL for local testing, but no new Cloudflare production deployment has been published.
-- Activation remains pending the second recipient verification and a successful live delivery check.
+- The latest single-recipient adjustment passed all 48 unit tests and all 14 contact browser tests, lint, typecheck, both builds, SAM validation, and an independent code review.
+- The pending `ngvcorp22@gmail.com` inbox is denied by the deployed IAM policy and does not block the approved single-recipient launch.
 
-When `ngvcorp22@gmail.com` is verified, first confirm its status with `list-email-identities` and submit a clearly labeled test to the deployed API.
-Confirm receipt in both inboxes, then run the static build and verification commands above and publish `out/` through Cloudflare Pages.
-Until then, keep the public frontend on its previous deployment instead of enabling a form whose mail is known to be blocked by the SES sandbox.
+### Adding the second inbox later
+
+The subsequent launch uses only `nationalgvinyl@gmail.com`, as explicitly approved by the user.
+Do not automatically add the pending address when SES marks it verified.
+When that follow-up change is requested, first confirm `ngvcorp22@gmail.com` verification with `list-email-identities`.
+Restore the originally requested TO `ngvcorp22@gmail.com` and CC `nationalgvinyl@gmail.com` in the handler, add the address back to the IAM recipient allowlist, and update both recipient assertions in the unit/browser tests.
+Rebuild and deploy the Lambda stack, then confirm receipt and headers in both inboxes.
+This recipient-only change does not require a frontend rebuild because recipient addresses are kept server-side.
 
 After a successful release, record the actual stack output and Pages deployment ID here.
 Rollback the frontend through Cloudflare Pages to the pre-contact deployment if necessary, and leave the contact stack intact while diagnosing delivery.
@@ -217,7 +224,7 @@ Avoid deleting a stack or SES identity merely to undo a frontend release.
 
 After AWS and frontend deployment, submit one clearly labeled test inquiry through the real published form.
 Verify the browser preflight and POST succeed from the actual site origin and that the form reports success only after the POST.
-Confirm receipt in **both** inboxes and inspect TO, CC, Reply-To, name, phone, email, and description.
+Confirm receipt in `nationalgvinyl@gmail.com` and inspect TO, the absence of CC, Reply-To, name, phone, email, and description.
 Confirm replying addresses the visitor, and check spam folders if delivery is delayed.
 Monitor Lambda errors and SES delivery/bounce/complaint information; a MessageId alone is not inbox proof.
 Do not mark delivery complete until these checks pass.

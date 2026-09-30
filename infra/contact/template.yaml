@@ -54,7 +54,6 @@ Resources:
                   ses:FromAddress: !Ref SesFromEmail
                 ForAllValues:StringEquals:
                   ses:Recipients:
-                    - ngvcorp22@gmail.com
                     - nationalgvinyl@gmail.com
       Events:
         Contact:

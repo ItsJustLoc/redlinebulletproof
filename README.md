@@ -158,7 +158,8 @@ The required fields are `name`, `phone`, `email`, and `description`.
 `ContactForm` accepts an optional `onSubmit` adapter.
 
 The form posts JSON to the public `NEXT_PUBLIC_CONTACT_API_URL`, baked into the export at build time.
-The Lambda sends plain-text mail TO `ngvcorp22@gmail.com` and CC `nationalgvinyl@gmail.com`, with the visitor email as Reply-To.
+The Lambda currently sends plain-text mail TO `nationalgvinyl@gmail.com`, with the visitor email as Reply-To.
+The user approved launching with this verified inbox while `ngvcorp22@gmail.com` verification is pending.
 Recipients and AWS credentials are never supplied by the browser.
 The same Zod schema validates input in the browser and Lambda.
 A hidden honeypot, bounded request sizes, exact origin checks, and API Gateway throttling provide basic abuse protection.

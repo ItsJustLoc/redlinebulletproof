@@ -72,8 +72,7 @@ export function createContactHandler(sendEmail: SendEmail, config: Config) {
       const sent = await sendEmail({
         FromEmailAddress: config.fromEmail,
         Destination: {
-          ToAddresses: ["ngvcorp22@gmail.com"],
-          CcAddresses: ["nationalgvinyl@gmail.com"],
+          ToAddresses: ["nationalgvinyl@gmail.com"],
         },
         ReplyToAddresses: [email],
         Content: {

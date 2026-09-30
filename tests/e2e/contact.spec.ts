@@ -51,8 +51,7 @@ test("submits through the real Lambda handler, waits for SES and resets only on 
   await expect(page.getByLabel("Email Address")).toHaveValue("person@example.com");
   await expect.poll(() => messages.length).toBe(1);
   expect(messages[0].Destination).toEqual({
-    ToAddresses: ["ngvcorp22@gmail.com"],
-    CcAddresses: ["nationalgvinyl@gmail.com"],
+    ToAddresses: ["nationalgvinyl@gmail.com"],
   });
   expect(messages[0].ReplyToAddresses).toEqual(["person@example.com"]);
   expect(messages[0].Content?.Simple?.Body?.Text?.Data).toContain("Phone: 555-010-1234");
